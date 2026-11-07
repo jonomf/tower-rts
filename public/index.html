@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1d2340" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Tower RTS</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+
+    <header id="topbar">
+      <div class="res" title="Minerals"><i class="m">◆</i><span id="minerals">0</span></div>
+      <div class="res" title="Gas"><i class="g">▲</i><span id="gas">0</span></div>
+      <div class="res" title="Supply used / max"><i class="s">☗</i><span id="supply">0/0</span></div>
+      <div class="spacer"></div>
+      <div class="res clock" id="clock">0:00</div>
+      <button id="pause" title="Pause (Space)">❚❚</button>
+      <button id="speed" title="Speed (− / +)">1×</button>
+      <button id="recenter" title="Re-frame the tower">⌖</button>
+      <button id="debug" title="Debug overlay (`)">#</button>
+      <button id="help-btn" title="Help">?</button>
+    </header>
+
+    <nav id="palette" aria-label="Build"></nav>
+    <aside id="panel"></aside>
+    <div id="toast"></div>
+
+    <div id="help">
+      <div class="sheet">
+        <h2>Tower RTS <small>build __BUILD__</small></h2>
+        <p>Build rooms in your tower. Producers fill up over time. <b>Tap them to collect</b>; untapped rooms only trickle in 40%.</p>
+        <p>Rooms need a floor or a room beneath them. Same-type rooms side by side <b>merge</b> (up to 3) and produce more.</p>
+        <p>The red edge on the right is your lane face: the side the enemy will hit (coming in M2).</p>
+        <ul>
+          <li><b>Tap / click</b> a room: select (and collect)</li>
+          <li><b>Drag</b>: pan · <b>Pinch / wheel</b>: zoom</li>
+          <li><b>1–4</b>: pick a room · <b>Esc / right-click</b>: cancel</li>
+          <li><b>Space</b>: pause · <b>− / +</b>: speed · <b>Del</b>: demolish · <b>`</b>: debug</li>
+        </ul>
+        <div class="acts">
+          <button id="new-game">New game</button>
+          <button id="help-close">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

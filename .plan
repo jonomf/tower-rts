@@ -1,0 +1,109 @@
+# Tower RTS: development plan
+
+Working title "tower-rts" (rename freely; avoid "Fallout"/"Vault" in public names).
+Fallout Shelter tower building + StarCraft macro. Two towers face each other across one lane.
+You build rooms; units train automatically and march on the enemy tower. You win by adapting the tower to what the enemy fields.
+Source notes: [[Fallout Shelter + RTS game (jam) idea]], [[Auto-Starcraft]] (jono-obs).
+Prior art: docs/one-day-projects/2025-4-30 - FalloutShelter+AutoRTS (Godot MVP, reference only), docs/auto-rts (stack + sim patterns).
+
+Claude writes all the code. Milestones are scope gates, not time estimates.
+Every milestone ends with: tests green, build green, pushed, live on GitHub Pages, and a short "try this" note for Jono.
+
+---
+
+## Decisions (proposed defaults; Jono can overturn any of them)
+- [x] D1 Stack: TypeScript + Canvas 2D + GitHub Pages, **zero dependencies beyond `typescript`** (revised 2026-11-06).
+      No Vite/Vitest: Claude's workspace can't install packages, so the build is plain `tsc` (native ES modules, no bundler)
+      and tests use Node's built-in runner (`node --test`, Node ≥22.18 runs .ts directly). Claude can run, test and screenshot everything.
+      Mobile = the web page on a phone (landscape, touch-first). PWA install in M5. Native wrapper only if ever needed.
+- [x] D2 New repo (github.com/jonomf/tower-rts), not a mode inside auto-rts. Copy the proven pieces (fixed-tick World, Command pipe, defs catalog, combat, separation, camera, Pages workflow) and don't share them as a package.
+- [x] D3 Deterministic sim from day one (20 Hz fixed tick, seeded RNG, every change goes through `issue(command)`). That buys replays, headless AI-vs-AI balance runs, and lockstep multiplayer later.
+- [x] D4 Generic names (Trooper, Flyer...), not Terran names. Same rule as auto-rts.
+- [x] D5 One bank per tower (the tower is the stockpile). This differs from auto-rts's per-building stock on purpose: it's one building.
+- [x] D6 Side-view cross-section, landscape: your tower on the left, the lane in the middle, enemy tower on the right. Pinch/drag camera.
+- [ ] D7 Target match length: 5–8 minutes ("one sitting").
+
+## Open questions for Jono (Claude proceeds on the default in brackets until told otherwise)
+- Q1 Micro dial: FS-style tap-to-collect on resource rooms, with slower auto-collect when you don't tap? [yes, both, and a setting]
+- Q2 Crew/dwellers assigned to rooms (the most "Fallout Shelter" mechanic)? [not in MVP; candidate for M4+ if the feel test says it's too thin]
+- Q3 Room merging: adjacent same-type rooms merge up to 3 wide for an efficiency bonus? [yes]
+- Q4 Can you aim your army (hold at home / push) or is it purely automatic? [one hold/push lever per tower, added in M4]
+- Q5 ~~Repo~~ done: github.com/jonomf/tower-rts. Jono: Settings → Pages → Source "GitHub Actions" (one-time).
+- Q6 Tapping currently earns ~2.5× an untapped tower (`npm run match`). Is that the right size for the micro dial? [keep for now; revisit at the M3 feel test]
+
+---
+
+## M0: scaffold ✅
+- [x] repo: TS strict, `npm run dev | test | build | typecheck | match`; Pages workflow (typecheck → test → build → deploy)
+- [x] `src/sim/`: World (towers, tick, seconds), seeded RNG, Command type + `issue()`, command log + `replay()`, `hash()`
+- [x] `src/render/`: canvas, camera (pan/zoom, mouse + touch + trackpad), debug overlay (tick, fps, hash; `` ` `` key / # button)
+- [x] `tools/match.ts`: headless runner (M1: scripted economy openings, tap vs no-tap)
+- [x] tests: same seed + same commands → same hash; replay reproduces it; rejected commands aren't logged
+- Exit: live page on Pages; tests green
+
+## M1: one tower, economy only (no enemy) ✅
+- [x] tower grid: 6 columns × 8 floors. Core (2 wide) pre-built at the back of floor 0; trickles 1 mineral/s
+      (lane door dropped for now: units can just exit floor 0 in M2)
+- [x] support rule: a room needs floor 0 or a room below it (unfinished rooms count)
+- [x] build room: cost up front + build time, construction progress, cancel = full refund. Demolish = 50% refund (+ its buffer).
+      Neither may leave a room floating
+- [x] rooms: Mine (minerals), Refinery (gas), Quarters (+supply), Wall (armor, for M2)
+- [x] merge: adjacent built same-type rooms on a floor merge up to 3 wide (×2.2 / ×3.6 output; Quarters supply too)
+- [x] collect: rooms fill a buffer (30 s cap) with an FS-style bubble; tap collects the whole merged group; 40% auto-collect
+      (`autoCollectRate` world option is the micro dial)
+- [x] HUD: bank, supply, clock, pause/speed, build palette (bottom; right-hand column on landscape phones), room panel, toasts, help
+- [x] touch + mouse: tap = act, drag = pan, pinch/wheel = zoom; keys 1–4, Esc, Space, −/+, Del
+- [x] tests: production rates, merge groups + bonus, support rule, refunds, supply, buffer cap, auto-collect
+- Exit: build a working economy on a phone (verified in headless Chromium at 1366×800, 844×390 and 390×844)
+
+## M2: units and the lane
+- [ ] production rooms: Barracks (ground), Hangar (air). Each has a training queue (5), its own unit pick, supply checks, and auto-repeat
+- [ ] units spawn at the door (ground) or the hangar (air), walk/fly the lane, and auto-acquire targets in range
+- [ ] combat ported from auto-rts: hp, range, cooldown, air/ground flags, separation
+- [ ] tower damage model: attackers hit the frontmost (lane-side) room on the floors they can reach (ground: floors 0–1; air and siege: any). Destroyed room → rubble cell, rebuildable. Core destroyed = loss
+- [ ] static enemy dummy tower (several rooms + core, no production)
+- [ ] tests: queue/supply, air/ground targeting, frontmost-room rule, rubble rebuild
+- Exit: you can raze a dummy tower with units you produced
+
+## M3: full match vs AI ← FEEL-TEST GATE
+- [ ] enemy tower is a mirrored grid run by AI v0. AI = data: an ordered build order + repeat rules (the same JSON shape that player automation can use later)
+- [ ] 2 AI scripts: "rush" and "boom"
+- [ ] game flow: menu → match → win/lose → rematch; pause; 0.5×–4× speed
+- [ ] `tools/match.ts` works end to end: AI vs AI, win rate, average length, tower-razed time
+- [ ] tests: a full headless match ends with a winner under 12 min; replay from the command log reproduces the hash
+- Exit: **Jono plays a few matches on phone and desktop, then answers: engaging, or too simplified?** (the 2025-4-30 worry)
+  Levers if it's thin: tap-collect pressure, rush-room risk, crew (Q2), the hold/push lever (Q4), more direct room abilities
+
+## M4: strategic depth (the actual game)
+- [ ] roster with counters, starting set:
+      Trooper (ground, hits G+A weakly) · Bruiser (ground, anti-armor, G only) · Siege Walker (slow, big room damage)
+      Flyer (air, hits G) · Interceptor (air, hits A only)
+- [ ] defense rooms on the lane face: Gun Nest (anti-ground), Flak (anti-air). The note's example: enemy goes air-to-ground → you build Flak/Interceptors
+- [ ] research rooms: unlock tier-2 units and +damage/+armor upgrades per branch
+- [ ] scouting info: an enemy composition readout (what's coming, what they're teching)
+- [ ] hold/push lever (Q4)
+- [ ] AI v1: reads your composition and counter-builds; 3 difficulties
+- [ ] balance via headless sweeps: every AI script vs every other, N=200 each; no strategy over 65% win rate; easy < medium < hard
+- [ ] tests: counter table holds in isolated 1v1 unit fights
+- Exit: matches with real decisions; a balance report in `docs/balance.md`
+
+## M5: mobile polish
+- [ ] touch UX pass: hit sizes, long-press info, landscape lock or responsive layout
+- [ ] PWA: manifest, offline, install
+- [ ] art pass: FS-style cross-section rooms with little animated occupants; procedural/vector, no external assets needed
+- [ ] audio + juice: hits, room destroyed, wave incoming
+- [ ] first-match onboarding (scripted easy AI plus 3 hints, no tutorial screens)
+- Exit: feels like a phone game
+
+## Later (from the note), in rough order
+- [ ] MVP+1 multiplayer: deterministic lockstep over WebRTC (+ small relay); the sim is built for this from M0
+- [ ] Jackbox mode: TV/laptop shows the battlefield; phones are each player's tower (room code join)
+- [ ] Auto-Starcraft tie-in: player-written programs drive the tower (build order + rules), same format as the AI
+- [ ] CCG budget on programs (from [[Auto-Starcraft]] 2023-1-3)
+- [ ] AR: tower as an "ant farm" on your desk (WebXR)
+- [ ] more lanes / more towers / map
+
+---
+Log
+- 2026-11-06: plan written from the obs note + Godot proto + auto-rts review
+- 2026-11-06: M0 + M1 done. Zero-dep stack (D1 revised). 19 tests. Tapping vs not: ~2.5× income (Q6)

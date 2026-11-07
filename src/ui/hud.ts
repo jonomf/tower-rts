@@ -1,0 +1,139 @@
+/** DOM HUD: top bar, build palette, selected-room panel, toasts, help. Rebuilt cheaply each frame via text diffing. */
+import { ECON, MERGE_MULT, PALETTE, ROOMS, type Cost } from '../sim/defs.ts';
+import { bufferCap, canAfford, groupOf, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
+import type { Game } from '../game.ts';
+
+const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
+
+export class Hud {
+  private readonly minerals = $('#minerals');
+  private readonly gas = $('#gas');
+  private readonly supply = $('#supply');
+  private readonly clock = $('#clock');
+  private readonly pauseBtn = $<HTMLButtonElement>('#pause');
+  private readonly speedBtn = $<HTMLButtonElement>('#speed');
+  private readonly palette = $('#palette');
+  private readonly panel = $('#panel');
+  private readonly toast = $('#toast');
+  private readonly help = $('#help');
+  private readonly buttons = new Map<string, HTMLButtonElement>();
+  private panelKey = '';
+  private readonly game: Game;
+
+  constructor(game: Game) {
+    this.game = game;
+    for (const id of PALETTE) {
+      const d = ROOMS[id];
+      const b = document.createElement('button');
+      b.className = 'build';
+      b.style.setProperty('--room', d.color);
+      b.innerHTML = `<span class="name">${d.name}</span><span class="cost">${costHtml(d.cost)}</span>`;
+      b.title = `${d.name}: ${d.blurb} (${d.buildTime}s)`;
+      b.addEventListener('click', () => game.togglePlacing(id));
+      this.palette.append(b);
+      this.buttons.set(id, b);
+    }
+    this.pauseBtn.addEventListener('click', () => game.togglePause());
+    this.speedBtn.addEventListener('click', () => game.rotateSpeed());
+    $('#debug').addEventListener('click', () => (game.debug = !game.debug));
+    $('#help-btn').addEventListener('click', () => this.help.classList.toggle('open'));
+    $('#help-close').addEventListener('click', () => this.help.classList.remove('open'));
+    $('#new-game').addEventListener('click', () => {
+      this.help.classList.remove('open');
+      game.newGame();
+    });
+    this.panel.addEventListener('click', (e) => {
+      const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
+      const s = game.selected;
+      if (!act || !s) return;
+      if (act === 'collect') game.collect(s);
+      if (act === 'remove') game.demolishOrCancel(s);
+      if (act === 'close') game.selected = null;
+      this.panelKey = '';
+    });
+  }
+
+  update(): void {
+    const g = this.game;
+    const t = g.tower;
+    set(this.minerals, String(Math.floor(t.bank.minerals)));
+    set(this.gas, String(Math.floor(t.bank.gas)));
+    set(this.supply, `0/${supplyMax(t)}`);
+    const s = Math.floor(g.world.seconds);
+    set(this.clock, `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
+    set(this.pauseBtn, g.paused ? '▶' : '❚❚');
+    this.pauseBtn.classList.toggle('on', g.paused);
+    set(this.speedBtn, `${g.speed}×`);
+
+    for (const [id, b] of this.buttons) {
+      const d = ROOMS[id as keyof typeof ROOMS];
+      b.classList.toggle('active', g.placing === id);
+      b.classList.toggle('poor', !canAfford(t.bank, d.cost));
+    }
+
+    if (g.toast) {
+      set(this.toast, g.toast.text);
+      this.toast.className = `show ${g.toast.kind}`;
+      this.toast.style.opacity = String(Math.min(1, (2.5 - g.toast.age) * 2));
+    } else this.toast.className = '';
+
+    this.updatePanel();
+  }
+
+  private updatePanel(): void {
+    const g = this.game;
+    const s = g.selected;
+    const r = s && roomAt(g.tower, s.col, s.floor);
+    if (!r) {
+      this.panel.classList.remove('open');
+      this.panelKey = '';
+      return;
+    }
+    const d = ROOMS[r.def];
+    const group = groupOf(g.tower, r);
+    const lines: string[] = [];
+    if (!r.built) {
+      lines.push(`Building… ${Math.floor((r.progress / d.buildTime) * 100)}% (${Math.ceil(d.buildTime - r.progress)}s left)`);
+    } else if (d.produces) {
+      const rate = roomRate(g.tower, r) * group.length;
+      const buf = group.reduce((a, m) => a + m.buffer, 0);
+      const cap = bufferCap(roomRate(g.tower, r)) * group.length;
+      lines.push(`${rate.toFixed(1)} ${d.produces.res}/s${group.length > 1 ? ` (merged ×${group.length}: +${Math.round((MERGE_MULT[group.length] / group.length - 1) * 100)}%)` : ''}`);
+      lines.push(`Ready: ${Math.floor(buf)} / ${Math.floor(cap)} · auto ${Math.round(g.world.options.autoCollectRate * 100)}%`);
+    } else if (d.supply) {
+      lines.push(`+${Math.floor(d.supply * MERGE_MULT[group.length])} supply${group.length > 1 ? ` (merged ×${group.length})` : ''}`);
+    } else if (r.def === 'core') {
+      lines.push(`HP ${Math.ceil(r.hp)} / ${d.hp} · +${ECON.coreRate.minerals} minerals/s`);
+    }
+    const removeErr = removalError(g.tower, r);
+    const refund = r.built
+      ? { minerals: Math.floor(r.paid.minerals * ECON.demolishRefund), gas: Math.floor(r.paid.gas * ECON.demolishRefund) }
+      : r.paid;
+    const canCollect = r.built && !!d.produces && group.some((m) => m.buffer >= 1);
+    const key = JSON.stringify([r.id, lines, removeErr, canCollect, group.length]);
+    if (key === this.panelKey) return;
+    this.panelKey = key;
+    const removeLabel = r.def === 'core' ? '' : `${r.built ? 'Demolish' : 'Cancel'} <span class="cost">+${costHtml(refund)}</span>`;
+    this.panel.innerHTML = `
+      <div class="head" style="--room:${d.color}"><b>${d.name}</b><button data-act="close" class="x" aria-label="Close">✕</button></div>
+      <p class="blurb">${d.blurb}</p>
+      ${lines.map((l) => `<p>${l}</p>`).join('')}
+      <div class="acts">
+        ${d.produces ? `<button data-act="collect" ${canCollect ? '' : 'disabled'}>Collect</button>` : ''}
+        ${removeLabel ? `<button data-act="remove" ${removeErr ? `disabled title="${removeErr}"` : ''}>${removeLabel}</button>` : ''}
+      </div>
+      ${removeErr && r.def !== 'core' ? `<p class="why">${removeErr}</p>` : ''}`;
+    this.panel.classList.add('open');
+  }
+}
+
+function costHtml(c: Cost): string {
+  const parts = [];
+  if (c.minerals) parts.push(`<i class="m">◆</i>${c.minerals}`);
+  if (c.gas) parts.push(`<i class="g">▲</i>${c.gas}`);
+  return parts.join(' ') || 'free';
+}
+
+function set(el: HTMLElement, text: string): void {
+  if (el.textContent !== text) el.textContent = text;
+}
