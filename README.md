@@ -3,8 +3,8 @@
 Fallout Shelter tower building meets StarCraft macro. Two towers face each other across one lane.
 You build rooms; units train on their own and march on the enemy. Your weapon is the shape of your tower.
 
-**Status: M1, one-tower economy.** Build Mines, Refineries, Quarters and Walls; merge rooms; tap to collect.
-The enemy and units arrive in M2–M3. See [`.plan`](.plan) for the roadmap and [`DESIGN.md`](DESIGN.md) for the rules and numbers.
+**Status: M2, units and the lane.** Build an economy, then Barracks and Hangars that train units on repeat.
+Units march down the lane and raze a static dummy tower. A real AI opponent arrives in M3. See [`.plan`](.plan) for the roadmap and [`DESIGN.md`](DESIGN.md) for the rules and numbers.
 
 **Play:** https://jonomf.github.io/tower-rts/ (deployed by GitHub Actions on every push to `main`)
 
@@ -25,7 +25,9 @@ npm run match      # headless runs: scripted openings, tap vs no-tap income
 
 | | Touch | Mouse / keys |
 |---|---|---|
-| Build | tap a room in the palette, then a highlighted cell | click, or `1`–`4` |
+| Build | tap a room in the palette, then a highlighted cell | click, or `1`–`6` |
+| Pick / pause a unit | tap a Barracks or Hangar → panel | same |
+| Camera preset | ⌖ (your tower → whole field → enemy) | `F` |
 | Collect / select | tap a room | click |
 | Pan / zoom | drag / pinch | drag or trackpad swipe / wheel or pinch |
 | Cancel | ✕ | `Esc`, right-click |

@@ -73,7 +73,9 @@ i.s { color: var(--s); }
     background: linear-gradient(90deg, rgba(18, 20, 32, 0.55), var(--ui));
     border-top: 0; border-left: 1px solid var(--ui-line);
   }
-  .build { min-width: 96px; min-height: 48px; }
+  #palette { gap: 5px; }
+  .build { min-width: 96px; min-height: 0; flex: 1; max-height: 52px; padding: 2px 8px; }
+  .build .cost { font-size: 12px; }
   #topbar .res { min-width: 54px; font-size: 15px; }
 }
 
@@ -96,7 +98,12 @@ i.s { color: var(--s); }
 #panel .acts button { flex: 1; min-height: 42px; }
 #panel .cost { color: var(--dim); font-size: 13px; }
 @media (orientation: landscape) and (max-height: 520px) {
-  #panel { top: calc(56px + var(--safe-t)); bottom: auto; right: calc(124px + var(--safe-r)); width: 260px; }
+  #panel { top: calc(56px + var(--safe-t)); bottom: auto; right: calc(124px + var(--safe-r)); width: 236px; padding: 8px 10px 10px; }
+  #panel .blurb { display: none; }
+  #panel p { font-size: 13px; margin: 4px 0; }
+  #panel .head { font-size: 16px; }
+  #panel .acts button { min-height: 38px; }
+  #panel .train button { min-height: 46px; }
 }
 
 /* Narrow portrait phones: keep every top-bar control on screen. */
@@ -106,7 +113,8 @@ i.s { color: var(--s); }
   #topbar .clock { min-width: 0; }
   #topbar button { min-width: 34px; padding: 0 6px; }
   #debug { display: none; }
-  .build { min-width: 0; flex: 1; padding: 4px 6px; }
+  #palette { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .build { min-width: 0; min-height: 46px; padding: 4px 6px; }
 }
 
 /* ---- Toast ---- */
@@ -122,6 +130,20 @@ i.s { color: var(--s); }
 }
 
 /* ---- Help sheet ---- */
+#panel .acts.train { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 6px; }
+#panel .train button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 52px; padding: 4px; font-weight: 600; }
+#panel .train .cost { font-size: 11px; white-space: nowrap; font-weight: 400; }
+#panel .train button.on { background: rgba(255, 200, 87, 0.18); }
+
+/* ---- Game over ---- */
+#gameover { position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.45); display: none; align-items: center; justify-content: center; padding: 16px; }
+#gameover.open { display: flex; }
+#gameover .sheet { text-align: center; background: #1b1e2e; border: 1px solid var(--ui-line); border-radius: 16px; padding: 18px 26px; }
+#gameover.won .sheet { border-color: var(--accent); }
+#gameover h2 { margin: 0 0 6px; }
+#gameover .acts { display: flex; justify-content: center; margin-top: 12px; }
+#gameover button { min-height: 44px; padding: 0 22px; font-weight: 700; }
+
 #help { position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.55); display: none; align-items: center; justify-content: center; padding: 16px; }
 #help.open { display: flex; }
 #help .sheet { max-width: 460px; max-height: 100%; overflow: auto; background: #1b1e2e; border: 1px solid var(--ui-line); border-radius: 16px; padding: 16px 18px; }

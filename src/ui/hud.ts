@@ -1,6 +1,6 @@
 /** DOM HUD: top bar, build palette, selected-room panel, toasts, help. Rebuilt cheaply each frame via text diffing. */
-import { ECON, MERGE_MULT, PALETTE, ROOMS, type Cost } from '../sim/defs.ts';
-import { bufferCap, canAfford, groupOf, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
+import { ECON, MERGE_MULT, PALETTE, ROOMS, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
+import { bufferCap, canAfford, coreOf, groupOf, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
 import type { Game } from '../game.ts';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -16,6 +16,8 @@ export class Hud {
   private readonly panel = $('#panel');
   private readonly toast = $('#toast');
   private readonly help = $('#help');
+  private readonly gameover = $('#gameover');
+  private shownWinner: number | null = null;
   private readonly buttons = new Map<string, HTMLButtonElement>();
   private panelKey = '';
   private readonly game: Game;
@@ -49,8 +51,13 @@ export class Hud {
       if (act === 'collect') game.collect(s);
       if (act === 'remove') game.demolishOrCancel(s);
       if (act === 'close') game.selected = null;
+      if (act.startsWith('train:')) {
+        const u = act.slice(6);
+        game.setTrain(s, u === 'off' ? null : (u as UnitId));
+      }
       this.panelKey = '';
     });
+    $('#again').addEventListener('click', () => game.newGame());
   }
 
   update(): void {
@@ -58,7 +65,7 @@ export class Hud {
     const t = g.tower;
     set(this.minerals, String(Math.floor(t.bank.minerals)));
     set(this.gas, String(Math.floor(t.bank.gas)));
-    set(this.supply, `0/${supplyMax(t)}`);
+    set(this.supply, `${g.world.supplyUsed(g.team)}/${supplyMax(t)}`);
     const s = Math.floor(g.world.seconds);
     set(this.clock, `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
     set(this.pauseBtn, g.paused ? '▶' : '❚❚');
@@ -78,6 +85,26 @@ export class Hud {
     } else this.toast.className = '';
 
     this.updatePanel();
+    this.updateGameOver();
+  }
+
+  private updateGameOver(): void {
+    const w = this.game.world;
+    if (w.winner === this.shownWinner) return;
+    this.shownWinner = w.winner;
+    if (w.winner === null) {
+      this.gameover.classList.remove('open');
+      return;
+    }
+    const s = Math.floor(w.seconds);
+    const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const won = w.winner === this.game.team;
+    $('#gameover-title').textContent = won ? 'Enemy tower razed!' : 'Your Core fell';
+    $('#gameover-detail').textContent = won
+      ? `Took ${time}. Core HP left: ${Math.ceil(coreOf(this.game.tower)?.hp ?? 0)}.`
+      : `You held out for ${time}.`;
+    this.gameover.classList.toggle('won', won);
+    this.gameover.classList.add('open');
   }
 
   private updatePanel(): void {
@@ -105,24 +132,44 @@ export class Hud {
     } else if (r.def === 'core') {
       lines.push(`HP ${Math.ceil(r.hp)} / ${d.hp} · +${ECON.coreRate.minerals} minerals/s`);
     }
+    let trainHtml = '';
+    if (r.built && d.trains) {
+      if (r.job) {
+        const u = UNITS[r.job.unit];
+        lines.push(`Training ${u.name}: ${Math.floor((r.job.progress / u.trainTime) * 100)}%`);
+      } else if (!r.train) lines.push('Paused');
+      else {
+        const u = UNITS[r.train];
+        const why = g.world.supplyUsed(g.team) + u.supply > supplyMax(g.tower) ? 'supply (build Quarters)' : 'resources';
+        lines.push(`Waiting for ${why}`);
+      }
+      trainHtml = `<div class="acts train">${d.trains
+        .map((id) => {
+          const u = UNITS[id];
+          return `<button data-act="train:${id}" class="${r.train === id ? 'on' : ''}" title="${u.blurb}">${u.name}<span class="cost">${costHtml(u.cost)}</span><span class="cost">${u.supply} supply</span></button>`;
+        })
+        .join('')}<button data-act="train:off" class="${r.train ? '' : 'on'}">Pause</button></div>`;
+    }
+    if (r.built && r.hp < d.hp && d.hp > 0) lines.push(`Damaged: ${Math.ceil(r.hp)} / ${d.hp} HP`);
     const removeErr = removalError(g.tower, r);
     const refund = r.built
       ? { minerals: Math.floor(r.paid.minerals * ECON.demolishRefund), gas: Math.floor(r.paid.gas * ECON.demolishRefund) }
       : r.paid;
     const canCollect = r.built && !!d.produces && group.some((m) => m.buffer >= 1);
-    const key = JSON.stringify([r.id, lines, removeErr, canCollect, group.length]);
+    const key = JSON.stringify([r.id, lines, removeErr, canCollect, group.length, r.train]);
     if (key === this.panelKey) return;
     this.panelKey = key;
-    const removeLabel = r.def === 'core' ? '' : `${r.built ? 'Demolish' : 'Cancel'} <span class="cost">+${costHtml(refund)}</span>`;
+    const removeLabel = r.def === 'core' || r.def === 'rubble' ? '' : `${r.built ? 'Demolish' : 'Cancel'} <span class="cost">+${costHtml(refund)}</span>`;
     this.panel.innerHTML = `
       <div class="head" style="--room:${d.color}"><b>${d.name}</b><button data-act="close" class="x" aria-label="Close">✕</button></div>
       <p class="blurb">${d.blurb}</p>
       ${lines.map((l) => `<p>${l}</p>`).join('')}
+      ${trainHtml}
       <div class="acts">
         ${d.produces ? `<button data-act="collect" ${canCollect ? '' : 'disabled'}>Collect</button>` : ''}
         ${removeLabel ? `<button data-act="remove" ${removeErr ? `disabled title="${removeErr}"` : ''}>${removeLabel}</button>` : ''}
       </div>
-      ${removeErr && r.def !== 'core' ? `<p class="why">${removeErr}</p>` : ''}`;
+      ${removeErr && r.def !== 'core' && r.def !== 'rubble' ? `<p class="why">${removeErr}</p>` : ''}`;
     this.panel.classList.add('open');
   }
 }

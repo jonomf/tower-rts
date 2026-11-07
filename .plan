@@ -29,6 +29,9 @@ Every milestone ends with: tests green, build green, pushed, live on GitHub Page
 - Q3 Room merging: adjacent same-type rooms merge up to 3 wide for an efficiency bonus? [yes]
 - Q4 Can you aim your army (hold at home / push) or is it purely automatic? [one hold/push lever per tower, added in M4]
 - Q5 ~~Repo~~ done: github.com/jonomf/tower-rts. Jono: Settings → Pages → Source "GitHub Actions" (one-time).
+- Q7 Auto-repeat production spends every mineral as soon as it can, so a second Barracks is hard to save for unless you
+  pause the first. Options: keep (pausing is a decision), a per-room "keep a reserve" toggle, or only train when bank ≥ 2× unit cost.
+  [keep for now; revisit at the M3 feel test]
 - Q6 Tapping currently earns ~2.5× an untapped tower (`npm run match`). Is that the right size for the micro dial? [keep for now; revisit at the M3 feel test]
 
 ---
@@ -56,14 +59,21 @@ Every milestone ends with: tests green, build green, pushed, live on GitHub Page
 - [x] tests: production rates, merge groups + bonus, support rule, refunds, supply, buffer cap, auto-collect
 - Exit: build a working economy on a phone (verified in headless Chromium at 1366×800, 844×390 and 390×844)
 
-## M2: units and the lane
-- [ ] production rooms: Barracks (ground), Hangar (air). Each has a training queue (5), its own unit pick, supply checks, and auto-repeat
-- [ ] units spawn at the door (ground) or the hangar (air), walk/fly the lane, and auto-acquire targets in range
-- [ ] combat ported from auto-rts: hp, range, cooldown, air/ground flags, separation
-- [ ] tower damage model: attackers hit the frontmost (lane-side) room on the floors they can reach (ground: floors 0–1; air and siege: any). Destroyed room → rubble cell, rebuildable. Core destroyed = loss
-- [ ] static enemy dummy tower (several rooms + core, no production)
-- [ ] tests: queue/supply, air/ground targeting, frontmost-room rule, rubble rebuild
-- Exit: you can raze a dummy tower with units you produced
+## M2: units and the lane ✅
+- [x] production rooms: Barracks (Trooper / Bruiser), Hangar (Flyer, floor 4+). Each room keeps training its picked unit
+      on repeat (paid at start; needs bank + supply); pick or pause in the room panel; switching/pausing refunds the job.
+      (Changed from "queue of 5": with auto-repeat a queue added nothing.)
+- [x] units leave the tower (ground from floor 0, air from the Hangar's floor), march the 16-cell lane, auto-acquire targets in range
+- [x] combat: hp, range, cooldown, air/ground flags; the nearest hittable enemy in range wins; ground-only units walk under flyers.
+      No separation physics (the lane is 1-D); units fan out when drawn
+- [x] tower damage model: frontmost (lane-side) column first, then the lowest floor, among reachable floors
+      (ground: floors 1–2; air: any). Destroyed room → rubble (still supports, never targeted, rebuild at 50%). Core destroyed = loss, sim freezes
+- [x] static enemy dummy tower (17 rooms + Core, no production); ⌖ / F cycles camera: your tower → whole field → enemy
+- [x] client: mirrored enemy tower, unit sprites + hp bars, shot / death / destruction effects, room damage bars,
+      production status on rooms, game-over screen with Play again
+- [x] tests (12 new, 31 total): training + supply + refunds, Hangar floor rule, marching/stopping, unit fights,
+      air vs ground, frontRoom rule, rubble, Core loss + freeze, determinism with combat, and the exit test below
+- Exit: you can raze a dummy tower with units you produced. Scripted 2-mine → Barracks opening (tapping): razed at 2:36
 
 ## M3: full match vs AI ← FEEL-TEST GATE
 - [ ] enemy tower is a mirrored grid run by AI v0. AI = data: an ordered build order + repeat rules (the same JSON shape that player automation can use later)
@@ -106,4 +116,5 @@ Every milestone ends with: tests green, build green, pushed, live on GitHub Page
 ---
 Log
 - 2026-11-06: plan written from the obs note + Godot proto + auto-rts review
+- 2026-11-06: M2 done. Units, combat, rubble, dummy tower, game over. 31 tests. New Q7 (production vs. saving up)
 - 2026-11-06: M0 + M1 done. Zero-dep stack (D1 revised). 19 tests. Tapping vs not: ~2.5× income (Q6)

@@ -2,7 +2,7 @@
  * Client state around the sim: time control, selection, placement mode, feedback.
  * Everything that changes the world goes through world.issue().
  */
-import { ROOMS, type Cost, type RoomId } from './sim/defs.ts';
+import { ROOMS, type Cost, type RoomId, type UnitId } from './sim/defs.ts';
 import { groupOf, roomAt } from './sim/tower.ts';
 import { DT, World } from './sim/world.ts';
 import { PLAYER, type Command, type CommandResult, type Team } from './sim/types.ts';
@@ -32,7 +32,17 @@ export class Game {
   private hashVal = '';
 
   constructor(seed = Date.now() % 100000) {
-    this.world = new World({ seed });
+    this.world = Game.newWorld(seed);
+  }
+
+  /** M2: you vs a static dummy tower. */
+  static newWorld(seed: number): World {
+    return new World({ seed, teams: [0, 1], scenario: 'dummy' });
+  }
+
+  /** 0..1 progress between the last sim tick and the next (render interpolation). */
+  get alpha(): number {
+    return Math.min(1, this.acc / DT);
   }
 
   get tower() {
@@ -40,11 +50,13 @@ export class Game {
   }
 
   newGame(): void {
-    this.world = new World({ seed: Date.now() % 100000 });
+    this.world = Game.newWorld(Date.now() % 100000);
     this.placing = null;
     this.selected = null;
     this.floaters = [];
-    this.notify('New game. Build Mines, then tap them to collect.');
+    this.acc = 0;
+    this.paused = false;
+    this.notify('New game. Build Mines, then a Barracks.');
   }
 
   /** Advance by real time; the sim runs on fixed ticks. */
@@ -134,6 +146,10 @@ export class Game {
       if (res.gained) this.float(rect.x + rect.w / 2, rect.y + CELL_H * 0.3, res.gained);
       this.selected = null;
     }
+  }
+
+  setTrain(cell: Cell, unit: UnitId | null): void {
+    this.issue({ type: 'setTrain', team: this.team, col: cell.col, floor: cell.floor, unit });
   }
 
   togglePlacing(def: RoomId): void {

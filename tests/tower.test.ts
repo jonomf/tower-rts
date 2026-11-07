@@ -12,7 +12,7 @@ const rich = () => {
 };
 const build = (w: World, room: 'mine' | 'refinery' | 'quarters' | 'wall', col: number, floor: number): CommandResult =>
   w.issue({ type: 'build', team: 0, room, col, floor });
-const cmd = (w: World, type: Exclude<Command['type'], 'build'>, col: number, floor: number) => w.issue({ type, team: 0, col, floor });
+const cmd = (w: World, type: Exclude<Command['type'], 'build' | 'setTrain'>, col: number, floor: number) => w.issue({ type, team: 0, col, floor });
 const reason = (r: CommandResult) => (r.ok ? 'ok' : r.reason);
 
 test('a new tower has a 2-wide Core at the back of floor 0 and the starting bank', () => {

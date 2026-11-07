@@ -29,9 +29,9 @@ properties, and relative imports keep their `.ts` extension (tsc rewrites them t
 
 ## Layout
 ```
-src/sim/        defs.ts (all numbers), types.ts, world.ts (tick, issue, hash, replay), rng.ts,
-                commands.ts, tower.ts (grid, support, merge, supply), systems/economy.ts
-                (M2+: systems/{production,units,combat,damage}.ts)
+src/sim/        defs.ts (all numbers: rooms, units, lane), types.ts, world.ts (tick, issue, hash, replay,
+                spawnUnit, damageRoom, supplyUsed), rng.ts, commands.ts, tower.ts (grid, support, merge, supply,
+                rubble cost), scenario.ts (dummy enemy), systems/{economy,production,units}.ts
 src/ai/         (M3) script types, interpreter, scripts/*.json
 src/game.ts     client state: time control, selection, placing, floaters, toasts
 src/render/     layout.ts (cell ↔ world), camera.ts, renderer.ts (Canvas 2D)

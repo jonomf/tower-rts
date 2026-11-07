@@ -35,15 +35,25 @@ export function placementError(t: Tower, def: RoomId, col: number, floor: number
   const d = ROOMS[def];
   for (let c = col; c < col + d.width; c++) {
     if (!inBounds(c, floor)) return 'Outside the tower';
-    if (t.grid[floor][c] != null) return 'That cell is taken';
+    const here = roomAt(t, c, floor);
+    if (here && here.def !== 'rubble') return 'That cell is taken';
     if (floor > 0 && t.grid[floor - 1][c] == null) return 'Needs a room below it';
   }
+  if (d.minFloor && floor < d.minFloor) return `${d.name} must be on floor ${d.minFloor + 1} or higher`;
   return null;
+}
+
+/** What building `def` here costs: full price, or the rubble discount when rebuilding a destroyed cell. */
+export function buildCost(t: Tower, def: RoomId, col: number, floor: number): Cost {
+  const c = ROOMS[def].cost;
+  if (roomAt(t, col, floor)?.def !== 'rubble') return { ...c };
+  return { minerals: Math.floor(c.minerals * ECON.rubbleRebuild), gas: Math.floor(c.gas * ECON.rubbleRebuild) };
 }
 
 /** Why this room can't be removed, or null. Rooms can't leave anything above them floating. */
 export function removalError(t: Tower, r: Room): string | null {
   if (r.def === 'core') return 'The Core can’t be removed';
+  if (r.def === 'rubble') return 'Build over rubble to replace it';
   if (r.floor + 1 < TOWER.floors) {
     for (let c = r.col; c < r.col + r.w; c++) if (t.grid[r.floor + 1][c] != null) return 'A room above depends on it';
   }
@@ -63,6 +73,8 @@ export function placeRoom(t: Tower, id: RoomInstId, def: RoomId, col: number, fl
     progress: built ? d.buildTime : 0,
     buffer: 0,
     paid: { ...d.cost },
+    train: d.trains?.[0] ?? null,
+    job: null,
   };
   t.rooms.push(r);
   for (let c = col; c < col + d.width; c++) t.grid[floor][c] = id;

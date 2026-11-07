@@ -6,7 +6,8 @@
 export type Res = 'minerals' | 'gas';
 export type Cost = { minerals: number; gas: number };
 
-export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'wall';
+export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'barracks' | 'hangar' | 'wall' | 'rubble';
+export type UnitId = 'trooper' | 'bruiser' | 'flyer';
 
 export type RoomDef = {
   id: RoomId;
@@ -22,8 +23,12 @@ export type RoomDef = {
   supply?: number;
   /** Adjacent built rooms of this type on one floor merge (up to MAX_MERGE wide). */
   mergeable: boolean;
-  /** False for the pre-placed Core. */
+  /** False for the pre-placed Core and for rubble. */
   buildable: boolean;
+  /** Units this room can train (one at a time, on repeat). The first is the default pick. */
+  trains?: UnitId[];
+  /** Lowest floor this room may be built on. */
+  minFloor?: number;
   color: string;
   blurb: string;
 };
@@ -80,6 +85,33 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     color: '#b56576',
     blurb: 'Raises your supply cap (how big an army you can field).',
   },
+  barracks: {
+    id: 'barracks',
+    name: 'Barracks',
+    width: 1,
+    cost: { minerals: 150, gas: 0 },
+    buildTime: 15,
+    hp: 300,
+    trains: ['trooper', 'bruiser'],
+    mergeable: false,
+    buildable: true,
+    color: '#d17a22',
+    blurb: 'Trains ground units on repeat while you can pay and have supply.',
+  },
+  hangar: {
+    id: 'hangar',
+    name: 'Hangar',
+    width: 1,
+    cost: { minerals: 150, gas: 100 },
+    buildTime: 20,
+    hp: 300,
+    trains: ['flyer'],
+    minFloor: 3,
+    mergeable: false,
+    buildable: true,
+    color: '#7b5ea7',
+    blurb: 'Trains air units. Must be on floor 4 or higher.',
+  },
   wall: {
     id: 'wall',
     name: 'Wall',
@@ -92,10 +124,22 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     color: '#6c757d',
     blurb: 'Does nothing but soak damage. Cheap armor for the lane side.',
   },
+  rubble: {
+    id: 'rubble',
+    name: 'Rubble',
+    width: 1,
+    cost: { minerals: 0, gas: 0 },
+    buildTime: 0,
+    hp: 0,
+    mergeable: false,
+    buildable: false,
+    color: '#4a4440',
+    blurb: 'A destroyed room. Still holds up the floor above. Rebuilding here costs half.',
+  },
 };
 
 /** Build palette order. */
-export const PALETTE: RoomId[] = ['mine', 'refinery', 'quarters', 'wall'];
+export const PALETTE: RoomId[] = ['mine', 'refinery', 'quarters', 'barracks', 'hangar', 'wall'];
 
 export const TOWER = {
   cols: 6,
@@ -114,8 +158,87 @@ export const ECON = {
   /** Fraction of a room's rate that flows from its buffer to the bank on its own. 1 = no tapping needed. */
   autoCollectRate: 0.4,
   demolishRefund: 0.5,
+  /** Building on rubble costs this fraction of the room's price. */
+  rubbleRebuild: 0.5,
 };
 
 /** Total output multiplier for a merged group of n rooms (index = n). */
 export const MERGE_MULT = [0, 1, 2.2, 3.6];
 export const MAX_MERGE = 3;
+
+// ---- Units & lane ---------------------------------------------------------------
+
+export type UnitDef = {
+  id: UnitId;
+  name: string;
+  cost: Cost;
+  supply: number;
+  /** Seconds to train. */
+  trainTime: number;
+  hp: number;
+  /** Lane cells per second. */
+  speed: number;
+  air: boolean;
+  attack: {
+    damage: number;
+    /** Seconds between shots. */
+    cooldown: number;
+    /** Lane cells. */
+    range: number;
+    hitsGround: boolean;
+    hitsAir: boolean;
+  };
+  color: string;
+  blurb: string;
+};
+
+export const UNITS: Record<UnitId, UnitDef> = {
+  trooper: {
+    id: 'trooper',
+    name: 'Trooper',
+    cost: { minerals: 50, gas: 0 },
+    supply: 1,
+    trainTime: 6,
+    hp: 45,
+    speed: 1.0,
+    air: false,
+    attack: { damage: 6, cooldown: 0.6, range: 2, hitsGround: true, hitsAir: true },
+    color: '#9fd3ff',
+    blurb: 'Cheap all-rounder. Shoots ground and air.',
+  },
+  bruiser: {
+    id: 'bruiser',
+    name: 'Bruiser',
+    cost: { minerals: 100, gas: 25 },
+    supply: 2,
+    trainTime: 9,
+    hp: 120,
+    speed: 0.8,
+    air: false,
+    attack: { damage: 20, cooldown: 1.5, range: 0.6, hitsGround: true, hitsAir: false },
+    color: '#ffb36b',
+    blurb: 'Armored brawler. Ground only: flyers pass right over it.',
+  },
+  flyer: {
+    id: 'flyer',
+    name: 'Flyer',
+    cost: { minerals: 125, gas: 75 },
+    supply: 2,
+    trainTime: 10,
+    hp: 90,
+    speed: 1.4,
+    air: true,
+    attack: { damage: 12, cooldown: 1.0, range: 1.5, hitsGround: true, hitsAir: false },
+    color: '#d6b8ff',
+    blurb: 'Air-to-ground. Hits rooms on any floor; only anti-air can touch it.',
+  },
+};
+
+export const LANE = {
+  /** Cells between the two towers' lane faces. */
+  length: 16,
+  /** Ground units can hit rooms on floors [0, groundReach). Air units reach every floor. */
+  groundReach: 2,
+  /** Units count as touching when this close (cells), on top of attack range. */
+  contact: 0.25,
+};

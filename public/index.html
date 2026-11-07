@@ -20,7 +20,7 @@
       <div class="res clock" id="clock">0:00</div>
       <button id="pause" title="Pause (Space)">❚❚</button>
       <button id="speed" title="Speed (− / +)">1×</button>
-      <button id="recenter" title="Re-frame the tower">⌖</button>
+      <button id="recenter" title="Camera: your tower → whole field → enemy (F)">⌖</button>
       <button id="debug" title="Debug overlay (`)">#</button>
       <button id="help-btn" title="Help">?</button>
     </header>
@@ -29,16 +29,28 @@
     <aside id="panel"></aside>
     <div id="toast"></div>
 
+    <div id="gameover">
+      <div class="sheet">
+        <h2 id="gameover-title"></h2>
+        <p id="gameover-detail"></p>
+        <div class="acts"><button id="again">Play again</button></div>
+      </div>
+    </div>
+
     <div id="help">
       <div class="sheet">
         <h2>Tower RTS <small>build __BUILD__</small></h2>
-        <p>Build rooms in your tower. Producers fill up over time. <b>Tap them to collect</b>; untapped rooms only trickle in 40%.</p>
-        <p>Rooms need a floor or a room beneath them. Same-type rooms side by side <b>merge</b> (up to 3) and produce more.</p>
-        <p>The red edge on the right is your lane face: the side the enemy will hit (coming in M2).</p>
+        <p><b>Goal:</b> raze the enemy tower’s Core (M2: a static dummy that doesn’t fight back).</p>
+        <p>Build rooms in your tower. Producers fill up over time. <b>Tap them to collect</b>; untapped rooms only trickle in 40%.
+          Rooms need a floor or a room beneath them. Same-type rooms side by side <b>merge</b> (up to 3) and produce more.</p>
+        <p><b>Barracks</b> and <b>Hangars</b> train their unit on repeat while you can pay and have supply (Quarters raise it).
+          Units march on their own. Pick or pause a room’s unit in its panel. Pause it to save up for rooms.</p>
+        <p>Attackers hit the lane-side column first. Ground units reach floors 1–2; flyers reach any floor.
+          A destroyed room becomes rubble, which still holds up the floor above; rebuilding on it costs half.</p>
         <ul>
           <li><b>Tap / click</b> a room: select (and collect)</li>
-          <li><b>Drag</b>: pan · <b>Pinch / wheel</b>: zoom</li>
-          <li><b>1–4</b>: pick a room · <b>Esc / right-click</b>: cancel</li>
+          <li><b>Drag</b>: pan · <b>Pinch / wheel</b>: zoom · <b>⌖ / F</b>: tower → field → enemy</li>
+          <li><b>1–6</b>: pick a room · <b>Esc / right-click</b>: cancel</li>
           <li><b>Space</b>: pause · <b>− / +</b>: speed · <b>Del</b>: demolish · <b>`</b>: debug</li>
         </ul>
         <div class="acts">
