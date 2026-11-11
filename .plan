@@ -37,11 +37,11 @@ The current two-tower game stays in the menu as "Skirmish" and as a regression s
       - `measureInsets()` in `src/main.ts` must subtract the panel so the camera frames the tower in the remaining area.
       - Keep the structural-key pattern from the flicker fix. Never rebuild buttons on a timer.
       - Verify with Playwright at the three sizes: tower fully visible, no overlap with palette, top bar or lane strip.
-- Exit: Jono confirms the panel feels right on desktop and phone.
+- Exit: Jono confirms the panel feels right on desktop and phone. ✅ (2026-11-11: "rad")
 
 ## P1: generalize the world (no new gameplay; Skirmish must still pass)
 Goal: towers at arbitrary positions on one axis, attackable from both sides, more than two towers.
-- [ ] `Tower` gains `id`, `x` (left edge, world cells), `coreCol`, and `front: 'left' | 'right' | 'both'`.
+- [x] `Tower` gains `id`, `x` (left edge, world cells), `coreCol`, and `front: 'left' | 'right' | 'both'`.
       World x is in cells; a tower spans `[x, x + TOWER.cols)`; its faces are at `x` and `x + TOWER.cols`.
       Skirmish layout: home `x = 0` (front right), enemy `x = TOWER.cols + LANE.length` (front left, Core at cols 4–5).
       Units' `x` shifts by `+TOWER.cols` compared with today; `faceX(team)` is replaced by tower faces.
@@ -49,10 +49,10 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       Commands gain an optional `tower` id (default: the team's first tower).
 - [ ] Teams: `0` player, `1` hostile, `2` neutral. Add `hostile(a, b)` (only 0↔1). Replace every "the other team" computation.
 - [ ] Units gain `dir: 1 | -1` and `home: towerId | null`. Supply counts only units whose `home` is that tower.
-- [ ] `frontRoom(tower, fromSide, reachesAllFloors)`: scan columns from the side the attacker stands on.
+- [x] `frontRoom(tower, fromSide, reachesAllFloors)`: scan columns from the side the attacker stands on.
       A unit attacks the nearest hostile tower face ahead of it within reach; it stops at `face − dir × range`.
-- [ ] `pickCell` in the AI mirrors `front`/`back` by `tower.front`.
-- [ ] Renderer: draw every tower at `tower.x × CELL_W` with no mirroring; `laneToWorld(x) = x × CELL_W`. Camera presets
+- [x] `pickCell` in the AI mirrors `front`/`back` by `tower.front`.
+- [x] Renderer: draw every tower at `tower.x × CELL_W` with no mirroring; `laneToWorld(x) = x × CELL_W`. Camera presets
       cycle through known towers.
 - [ ] Tests: all 38 still pass after mechanical updates. Add: a tower hit from the left loses column 0 first; three towers
       on one axis; `hostile()` table; a neutral tower is never targeted.
@@ -122,6 +122,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-11: P1 coordinates: towers on one axis, world-oriented columns, frontRoom from either side. `match --all` identical to M3
 - 2026-11-11: build emits per-build JS folders (Pages cache served old scripts with new HTML)
 - 2026-11-11: P0 permanent room panel (right column / left column / portrait strip, tower summary). Waiting on Jono for P0 exit
 - 2026-11-11: v2 plan written. P0 flicker fix and Steady level shipped. v1 plan archived to docs/plan-v1.md

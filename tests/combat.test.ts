@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/sim/world.ts';
-import { ECON, LANE, ROOMS, UNITS, type RoomId } from '../src/sim/defs.ts';
+import { ECON, LANE, ROOMS, TOWER, UNITS, type RoomId } from '../src/sim/defs.ts';
 import { coreOf, roomAt, supplyMax } from '../src/sim/tower.ts';
 import { frontRoom } from '../src/sim/systems/units.ts';
 import type { Team } from '../src/sim/types.ts';
@@ -40,7 +40,7 @@ test('a Barracks trains its pick on repeat: paid at start, unit appears after tr
   w.stepSeconds(0.1);
   assert.equal(w.units.length, 1);
   assert.equal(w.units[0].def, 'trooper');
-  assert.ok(w.units[0].x < 0.2, 'it just left the tower');
+  assert.ok(w.units[0].x - TOWER.cols < 0.2, 'it just left the tower (its right face is at x = TOWER.cols)');
   assert.ok(r.job, 'the next one starts right away');
 });
 
@@ -98,11 +98,13 @@ test('Hangars need floor 4+; flyers launch at the Hangar’s height', () => {
 test('units march toward the enemy and stop at the enemy face, in range', () => {
   const w = arena();
   const u = w.spawnUnit('trooper', 0, 0);
+  // Axis positions: team 0's right face is at TOWER.cols, team 1's left face LANE.length cells further on.
+  const enemyFace = TOWER.cols + LANE.length;
   w.stepSeconds(1);
-  assert.ok(Math.abs(u.x - UNITS.trooper.speed) < 1e-6);
+  assert.ok(Math.abs(u.x - TOWER.cols - UNITS.trooper.speed) < 1e-6);
   w.stepSeconds(60);
   const reach = UNITS.trooper.attack.range + LANE.contact;
-  assert.ok(u.x >= LANE.length - reach - 1e-9 && u.x <= LANE.length - UNITS.trooper.attack.range, `stopped at ${u.x}`);
+  assert.ok(u.x >= enemyFace - reach - 1e-9 && u.x <= enemyFace - UNITS.trooper.attack.range, `stopped at ${u.x}`);
   assert.equal(u.target?.kind, 'room');
   const e = w.spawnUnit('trooper', 1, 0);
   w.stepSeconds(0.5);
@@ -134,51 +136,52 @@ test('ground-only units ignore flyers; flyers fly over and hit them', () => {
 });
 
 test('frontRoom: lane-side column first, lowest floor first; ground reaches floors 1–2 only', () => {
+  // Team 1's tower faces left: column 0 is its lane side, and attackers stand on its left.
   const w = arena();
   const t = w.tower(1);
-  place(w, 1, 'wall', 3, 0);
-  place(w, 1, 'wall', 3, 1);
-  place(w, 1, 'wall', 3, 2);
-  place(w, 1, 'wall', 4, 0);
-  place(w, 1, 'wall', 4, 1);
-  place(w, 1, 'wall', 4, 2);
-  place(w, 1, 'wall', 5, 0);
-  place(w, 1, 'wall', 5, 1);
-  place(w, 1, 'wall', 5, 2);
-  place(w, 1, 'mine', 5, 3);
-  roomAt(t, 5, 0)!.hp = 0; // treat as gone
-  roomAt(t, 5, 1)!.hp = 0;
-  assert.deepEqual(pos(frontRoom(t, false)), [4, 0], 'ground: floors 0-1 only, so column 4');
-  assert.deepEqual(pos(frontRoom(t, true)), [5, 2], 'air: frontmost column, any floor');
+  place(w, 1, 'wall', 2, 0);
+  place(w, 1, 'wall', 2, 1);
+  place(w, 1, 'wall', 2, 2);
+  place(w, 1, 'wall', 1, 0);
+  place(w, 1, 'wall', 1, 1);
+  place(w, 1, 'wall', 1, 2);
+  place(w, 1, 'wall', 0, 0);
+  place(w, 1, 'wall', 0, 1);
+  place(w, 1, 'wall', 0, 2);
+  place(w, 1, 'mine', 0, 3);
+  roomAt(t, 0, 0)!.hp = 0; // treat as gone
+  roomAt(t, 0, 1)!.hp = 0;
+  assert.deepEqual(pos(frontRoom(t, 'left', false)), [1, 0], 'ground: floors 0-1 only, so column 1');
+  assert.deepEqual(pos(frontRoom(t, 'left', true)), [0, 2], 'air: frontmost column, any floor');
 });
 const pos = (r: { col: number; floor: number } | undefined) => (r ? [r.col, r.floor] : null);
 
 test('destroyed rooms become rubble: still support, never targeted, rebuilt at half price', () => {
   const w = arena();
   const t = w.tower(1);
-  place(w, 1, 'wall', 5, 0);
-  place(w, 1, 'mine', 5, 1);
+  place(w, 1, 'wall', 0, 0);
+  place(w, 1, 'mine', 0, 1);
   builtNow(w);
-  const wall = roomAt(t, 5, 0)!;
+  const wall = roomAt(t, 0, 0)!;
   w.damageRoom(1, wall, 10000);
-  const rubble = roomAt(t, 5, 0)!;
+  const rubble = roomAt(t, 0, 0)!;
   assert.equal(rubble.def, 'rubble');
-  assert.equal(roomAt(t, 5, 1)?.def, 'mine', 'the room above still stands');
-  assert.deepEqual(pos(frontRoom(t, false)), [5, 1], 'rubble is skipped');
-  assert.equal(w.issue({ type: 'demolish', team: 1, col: 5, floor: 0 }).ok, false);
+  assert.equal(roomAt(t, 0, 1)?.def, 'mine', 'the room above still stands');
+  assert.deepEqual(pos(frontRoom(t, 'left', false)), [0, 1], 'rubble is skipped');
+  assert.equal(w.issue({ type: 'demolish', team: 1, col: 0, floor: 0 }).ok, false);
   const bank = t.bank.minerals;
-  assert.equal(w.issue({ type: 'build', team: 1, room: 'wall', col: 5, floor: 0 }).ok, true);
+  assert.equal(w.issue({ type: 'build', team: 1, room: 'wall', col: 0, floor: 0 }).ok, true);
   assert.equal(t.bank.minerals, bank - ROOMS.wall.cost.minerals * ECON.rubbleRebuild);
 });
 
 test('the Core falls last on its floor; when it falls the game ends and the sim freezes', () => {
   const w = arena();
   const t = w.tower(1);
-  place(w, 1, 'wall', 2, 0);
+  place(w, 1, 'wall', 3, 0);
   builtNow(w);
-  assert.equal(frontRoom(t, false)?.def, 'wall');
-  w.damageRoom(1, roomAt(t, 2, 0)!, 10000);
-  assert.equal(frontRoom(t, false)?.def, 'core');
+  assert.equal(frontRoom(t, 'left', false)?.def, 'wall');
+  w.damageRoom(1, roomAt(t, 3, 0)!, 10000);
+  assert.equal(frontRoom(t, 'left', false)?.def, 'core');
   w.damageRoom(1, coreOf(t)!, 100000);
   assert.equal(w.winner, 0);
   const tick = w.tick;

@@ -10,13 +10,12 @@ import type { World } from '../world.ts';
  */
 export function productionSystem(w: World, dt: number): void {
   for (const t of w.towers) {
-    if (!t) continue;
     const held = { minerals: 0, gas: 0 };
     for (const r of t.rooms) {
       if (!r.built || !ROOMS[r.def].trains) continue;
       if (!r.job && r.train) {
         const u = UNITS[r.train];
-        if (w.supplyUsed(t.team) + u.supply <= supplyMax(t)) {
+        if (w.supplyUsed(t) + u.supply <= supplyMax(t)) {
           // Held-back resources only block a unit that needs that resource.
           const free = {
             minerals: u.cost.minerals > 0 ? t.bank.minerals - held.minerals : 0,
@@ -35,7 +34,7 @@ export function productionSystem(w: World, dt: number): void {
       if (r.job) {
         r.job.progress += dt;
         if (r.job.progress >= UNITS[r.job.unit].trainTime - 1e-6) {
-          w.spawnUnit(r.job.unit, t.team, r.floor);
+          w.spawnUnit(r.job.unit, t.team, r.floor, t);
           r.job = null;
         }
       }

@@ -9,7 +9,7 @@ export type RoomInstId = number;
 export type Room = {
   id: RoomInstId;
   def: RoomId;
-  /** Leftmost column (tower-local: column cols-1 always faces the lane). */
+  /** Leftmost column, counted from the tower's left edge (world-oriented: no mirroring). */
   col: number;
   floor: number;
   w: number;
@@ -33,10 +33,14 @@ export type Unit = {
   id: UnitInstId;
   def: UnitId;
   team: Team;
-  /** Lane position in cells: 0 = team 0's lane face, LANE.length = team 1's. */
+  /** Position on the world axis, in cells (a tower spans [tower.x, tower.x + TOWER.cols)). */
   x: number;
   /** x at the start of the last tick (render interpolation). */
   px: number;
+  /** Walking direction on the axis. */
+  dir: 1 | -1;
+  /** The tower that trained this unit (it counts against that tower's supply), or null (raiders, test spawns). */
+  home: TowerId | null;
   /** Height in floors (0 for ground units). */
   alt: number;
   /** 0..1 visual spread across the lane's depth (no gameplay effect). */
@@ -46,7 +50,13 @@ export type Unit = {
   target: Target | null;
 };
 
-export type Target = { kind: 'unit'; id: UnitInstId } | { kind: 'room'; team: Team; id: RoomInstId };
+export type TowerId = number;
+
+export type Target = { kind: 'unit'; id: UnitInstId } | { kind: 'room'; tower: TowerId; id: RoomInstId };
+
+/** Which side of a tower faces danger: where its units leave from and where attackers are expected. */
+export type Front = 'left' | 'right' | 'both';
+export type Side = 'left' | 'right';
 
 /** Render-only events produced by the sim (not hashed). */
 export type Effect =
@@ -56,17 +66,23 @@ export type Effect =
       team: Team;
       fx: number;
       falt: number;
-      /** Unit target: lane position. */
+      /** Unit target: world position. */
       tx: number;
       talt: number;
-      /** Room target (drawn at the room instead of tx/talt). */
-      room: { team: Team; col: number; floor: number; w: number } | null;
+      /** Room target (drawn at the room instead of tx/talt). `x` is the tower's x; `side` is the face that was hit. */
+      room: { x: number; side: Side; col: number; floor: number; w: number } | null;
     }
-  | { kind: 'destroyed'; tick: number; team: Team; col: number; floor: number }
+  | { kind: 'destroyed'; tick: number; team: Team; x: number; col: number; floor: number }
   | { kind: 'died'; tick: number; x: number; alt: number; team: Team };
 
 export type Tower = {
+  id: TowerId;
   team: Team;
+  /** Left edge on the world axis, in cells. Faces are at x (left) and x + TOWER.cols (right). */
+  x: number;
+  /** Leftmost column of the Core (on floor 0). */
+  coreCol: number;
+  front: Front;
   bank: Cost;
   rooms: Room[];
   /** grid[floor][col] = room id or null. */

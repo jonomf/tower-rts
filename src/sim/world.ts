@@ -1,19 +1,19 @@
-import { ECON, OVERTIME, TOWER, UNITS, type UnitId } from './defs.ts';
+import { ECON, LANE, OVERTIME, TOWER, UNITS, type UnitId } from './defs.ts';
 import { applyCommand } from './commands.ts';
 import { Rng, fnv1a } from './rng.ts';
 import { constructionSystem, economySystem } from './systems/economy.ts';
 import { productionSystem } from './systems/production.ts';
-import { faceX, unitSystem } from './systems/units.ts';
+import { unitSystem } from './systems/units.ts';
 import { buildScenario, type ScenarioId } from './scenario.ts';
-import { coreOf, createTower, placeRoom, removeRoom } from './tower.ts';
-import type { Command, CommandResult, Effect, Room, Team, Tower, Unit } from './types.ts';
+import { coreOf, createTower, exitSide, faceOf, placeRoom, removeRoom, type TowerPlacement } from './tower.ts';
+import type { Command, CommandResult, Effect, Room, Team, Tower, TowerId, Unit } from './types.ts';
 
 export const TICK_RATE = 20;
 export const DT = 1 / TICK_RATE;
 
 export type WorldOptions = {
   seed: number;
-  /** Which towers exist. M1 is single-tower; the enemy arrives in M2/M3. */
+  /** Which teams get a tower, in Skirmish layout (team 0 on the left facing right, team 1 across the lane). */
   teams: Team[];
   /** The micro dial: 0 = tap or nothing, 1 = tapping is pointless. */
   autoCollectRate: number;
@@ -23,6 +23,13 @@ export type WorldOptions = {
 
 /** Render-only effects are kept this many ticks. */
 const EFFECT_TTL = 12;
+
+/** Skirmish layout: team 0's tower at the left facing right; team 1's across the lane, facing left, Core at the back. */
+export function skirmishPlacement(team: Team): TowerPlacement {
+  return team === 0
+    ? { x: 0, front: 'right', coreCol: TOWER.coreCol }
+    : { x: TOWER.cols + LANE.length, front: 'left', coreCol: TOWER.cols - 2 };
+}
 
 export type LoggedCommand = { tick: number; cmd: Command };
 
@@ -34,6 +41,7 @@ export class World {
   tick = 0;
   readonly options: WorldOptions;
   readonly rng: Rng;
+  /** Every tower on the axis, in creation order. */
   readonly towers: Tower[] = [];
   units: Unit[] = [];
   /** Render-only events (shots, deaths, destroyed rooms). Not part of the hash. */
@@ -47,11 +55,7 @@ export class World {
   constructor(options: Partial<WorldOptions> = {}) {
     this.options = { seed: 1, teams: [0], autoCollectRate: ECON.autoCollectRate, scenario: 'none', ...options };
     this.rng = new Rng(this.options.seed);
-    for (const team of this.options.teams) {
-      const t = createTower(team);
-      placeRoom(t, this.newId(), 'core', TOWER.coreCol, 0, true);
-      this.towers[team] = t;
-    }
+    for (const team of this.options.teams) this.addTower(team, skirmishPlacement(team));
     buildScenario(this, this.options.scenario);
   }
 
@@ -63,8 +67,23 @@ export class World {
     return this.nextId++;
   }
 
+  /** Create a tower with its Core. */
+  addTower(team: Team, at: TowerPlacement): Tower {
+    const t = createTower(this.newId(), team, at);
+    placeRoom(t, this.newId(), 'core', at.coreCol, 0, true);
+    this.towers.push(t);
+    return t;
+  }
+
+  /** A team's first tower (its home). */
   tower(team: Team): Tower {
-    return this.towers[team];
+    const t = this.towers.find((x) => x.team === team);
+    if (!t) throw new Error(`team ${team} has no tower`);
+    return t;
+  }
+
+  towerById(id: TowerId | null | undefined): Tower | undefined {
+    return id == null ? undefined : this.towers.find((t) => t.id === id);
   }
 
   /** Apply a command now (before the next step). Accepted commands are logged. */
@@ -77,7 +96,6 @@ export class World {
   step(): void {
     if (this.winner !== null) return;
     for (const t of this.towers) {
-      if (!t) continue;
       constructionSystem(t, DT);
       economySystem(t, DT, this.options.autoCollectRate);
     }
@@ -106,30 +124,38 @@ export class World {
     if (fallen.length === 1) this.winner = fallen[0] === 0 ? 1 : 0;
     else if (fallen.length === 2) {
       const score = (team: Team) =>
-        this.towers[team].rooms.reduce((s, r) => s + Math.max(0, r.hp), 0) + this.units.filter((u) => u.team === team).length;
+        this.tower(team).rooms.reduce((s, r) => s + Math.max(0, r.hp), 0) + this.units.filter((u) => u.team === team).length;
       this.winner = score(0) >= score(1) ? 0 : 1;
     }
   }
 
   // ---- Units & damage -----------------------------------------------------------
 
-  /** Supply in use: living units plus units being trained. */
-  supplyUsed(team: Team): number {
+  /** Supply in use by a tower: its living units plus units it is training. A team's number means its home tower. */
+  supplyUsed(of: Team | Tower): number {
+    const t = typeof of === 'number' ? this.tower(of) : of;
     let s = 0;
-    for (const u of this.units) if (u.team === team) s += UNITS[u.def].supply;
-    for (const r of this.towers[team]?.rooms ?? []) if (r.job) s += UNITS[r.job.unit].supply;
+    for (const u of this.units) if (u.home === t.id) s += UNITS[u.def].supply;
+    for (const r of t.rooms) if (r.job) s += UNITS[r.job.unit].supply;
     return s;
   }
 
-  /** A new unit leaves `team`'s tower. Ground units exit at floor 0; air units launch from their room's floor. */
-  spawnUnit(def: UnitId, team: Team, floor: number): Unit {
+  /**
+   * A new unit leaves a tower (default: the team's home) from its exit face. Ground units exit at floor 0;
+   * air units launch from their room's floor. Units spawned for a team count against its home tower's supply.
+   */
+  spawnUnit(def: UnitId, team: Team, floor: number, from: Tower = this.tower(team)): Unit {
     const d = UNITS[def];
+    const side = exitSide(from);
+    const x = faceOf(from, side);
     const u: Unit = {
       id: this.newId(),
       def,
       team,
-      x: faceX(team),
-      px: faceX(team),
+      x,
+      px: x,
+      dir: side === 'right' ? 1 : -1,
+      home: from.team === team ? from.id : null,
       alt: d.air ? floor + 0.5 : 0,
       depth: this.rng.next(),
       hp: d.hp,
@@ -140,16 +166,16 @@ export class World {
     return u;
   }
 
-  /** Damage a room; at 0 hp it becomes rubble, and a fallen Core ends the game. */
-  damageRoom(team: Team, room: Room, amount: number): void {
+  /** Damage a room; at 0 hp it becomes rubble, and a fallen Core ends the game. A team's number means its home tower. */
+  damageRoom(of: Team | Tower, room: Room, amount: number): void {
+    const t = typeof of === 'number' ? this.tower(of) : of;
     if (room.hp <= 0) return;
     room.hp -= amount;
     if (room.hp > 0) return;
-    const t = this.towers[team];
-    this.effects.push({ kind: 'destroyed', tick: this.tick, team, col: room.col, floor: room.floor });
+    this.effects.push({ kind: 'destroyed', tick: this.tick, team: t.team, x: t.x, col: room.col, floor: room.floor });
     removeRoom(t, room);
     if (room.def === 'core') {
-      this.winner = team === 0 ? 1 : 0;
+      this.winner = t.team === 0 ? 1 : 0;
       return;
     }
     placeRoom(t, this.newId(), 'rubble', room.col, room.floor, true);

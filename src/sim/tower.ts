@@ -1,16 +1,24 @@
 /**
  * Tower grid rules: placement, support, merge groups, supply.
- * Coordinates are tower-local: floor 0 is ground level, column TOWER.cols-1 faces the lane.
- * (The enemy tower is mirrored only when drawn.)
+ * Coordinates are per tower: floor 0 is ground level, column 0 is the tower's left edge (no mirroring).
+ * A tower sits on the world axis at [x, x + TOWER.cols); `front` says which face is its lane side.
  */
 import { ECON, MAX_MERGE, MERGE_MULT, ROOMS, TOWER, type Cost, type RoomId } from './defs.ts';
-import type { Room, RoomInstId, Team, Tower } from './types.ts';
+import type { Front, Room, RoomInstId, Side, Team, Tower, TowerId } from './types.ts';
 
-export function createTower(team: Team): Tower {
+export type TowerPlacement = { x: number; front: Front; coreCol: number };
+
+export function createTower(id: TowerId, team: Team, at: TowerPlacement): Tower {
   const grid: (RoomInstId | null)[][] = [];
   for (let f = 0; f < TOWER.floors; f++) grid.push(new Array<RoomInstId | null>(TOWER.cols).fill(null));
-  return { team, bank: { ...ECON.startBank }, rooms: [], grid, income: { minerals: 0, gas: 0 } };
+  return { id, team, ...at, bank: { ...ECON.startBank }, rooms: [], grid, income: { minerals: 0, gas: 0 } };
 }
+
+/** World x of a tower's face. */
+export const faceOf = (t: Tower, side: Side): number => (side === 'left' ? t.x : t.x + TOWER.cols);
+
+/** The side a tower's units leave from (a two-fronted tower defaults to the right until P2's deploy orders). */
+export const exitSide = (t: Tower): Side => (t.front === 'left' ? 'left' : 'right');
 
 export function inBounds(col: number, floor: number): boolean {
   return Number.isInteger(col) && Number.isInteger(floor) && col >= 0 && col < TOWER.cols && floor >= 0 && floor < TOWER.floors;

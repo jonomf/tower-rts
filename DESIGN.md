@@ -13,7 +13,8 @@ Units train on their own and march on the enemy. Your only weapon is the shape o
 Win: destroy the enemy Core. Overtime: from 5:00 both Cores burn 10 hp/s, so a match ends by 7:30; if both fall on the same tick, the tower with more room hp left wins.
 
 ## Tower
-- Grid 6 wide × 8 high. Column 5 faces the lane (mirrored for the enemy).
+- Grid 6 wide × 8 high. Columns run left to right on the world axis (no mirroring). A tower's `front` is its lane side:
+  in Skirmish yours faces right (Core in columns 1–2) and the enemy's faces left (Core in columns 5–6).
 - Core: 2 cells at the back of floor 0, 1500 hp, trickles 1 mineral/s into the bank (a broke tower can recover). Pre-built, and it can't be removed.
 - Support: build on floor 0 or directly above a room (including one still building), or rubble (M2).
 - Removal: cancel a room under construction for a full refund, or demolish a built one for 50% (+ its uncollected buffer). Nothing may be left floating.

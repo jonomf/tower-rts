@@ -1,7 +1,7 @@
 import { Game } from './game.ts';
 import { Camera } from './render/camera.ts';
 import { Renderer } from './render/renderer.ts';
-import { ENEMY_X0, FIELD_W, FRAME, TOWER_H, TOWER_W } from './render/layout.ts';
+import { CELL_W, FRAME, TOWER_H, TOWER_W, fieldBounds } from './render/layout.ts';
 import { attachInput } from './input/input.ts';
 import { Hud } from './ui/hud.ts';
 
@@ -37,9 +37,9 @@ function measureInsets(): void {
   };
 }
 
-/** Camera presets, cycled by ⌖ / F: your tower (+ a peek down the lane), the whole field, the enemy tower. */
-const VIEWS = ['tower', 'field', 'enemy'] as const;
+/** Camera presets, cycled by ⌖ / F: your tower (+ a peek toward its front), the whole field, then each other tower. */
 let view = 0;
+const viewCount = () => game.world.towers.length + 1;
 
 function frameView(): void {
   const pad = 30;
@@ -47,21 +47,27 @@ function frameView(): void {
   const h = -top + 30 + pad;
   const portrait = cam.height > cam.width;
   const peek = portrait ? 0 : 200;
-  switch (VIEWS[view]) {
-    case 'tower':
-      return cam.fit({ x: -FRAME - pad, y: top, w: TOWER_W + FRAME * 2 + pad * 2 + peek, h });
-    case 'field':
-      return cam.fit({ x: -FRAME - pad, y: top, w: FIELD_W + FRAME * 2 + pad * 2, h });
-    case 'enemy':
-      return cam.fit({ x: ENEMY_X0 - FRAME - pad - peek, y: top, w: TOWER_W + FRAME * 2 + pad * 2 + peek, h });
+  const frameTower = (t: (typeof game.world.towers)[number]) => {
+    const x = t.x * CELL_W;
+    const left = t.front === 'left' ? peek : 0;
+    const right = t.front === 'left' ? 0 : peek;
+    cam.fit({ x: x - FRAME - pad - left, y: top, w: TOWER_W + FRAME * 2 + pad * 2 + left + right, h });
+  };
+  if (view === 0) return frameTower(game.tower);
+  if (view === 1) {
+    const b = fieldBounds(game.world.towers);
+    return cam.fit({ x: b.x0 - FRAME - pad, y: top, w: b.x1 - b.x0 + FRAME * 2 + pad * 2, h });
   }
+  const others = game.world.towers.filter((t) => t !== game.tower);
+  if (!others.length) return frameTower(game.tower);
+  frameTower(others[(view - 2) % others.length]);
 }
 
 function cycleView(): void {
   userMovedCamera = false;
-  view = (view + 1) % VIEWS.length;
+  view = (view + 1) % viewCount();
   frameView();
-  game.notify(`View: ${VIEWS[view] === 'tower' ? 'your tower' : VIEWS[view] === 'field' ? 'whole field' : 'enemy tower'}`);
+  game.notify(`View: ${view === 0 ? 'your tower' : view === 1 ? 'whole field' : 'enemy tower'}`);
 }
 
 function onResize(): void {

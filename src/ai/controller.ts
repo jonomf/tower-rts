@@ -23,19 +23,21 @@ export function pickCell(t: Tower, def: RoomId, where: Where): Cell | null {
   for (let floor = 0; floor < TOWER.floors; floor++)
     for (let col = 0; col < TOWER.cols; col++) if (!placementError(t, def, col, floor)) valid.push({ col, floor });
   if (!valid.length) return null;
+  // Columns counted from the tower's back (0 = the column farthest from its front face).
+  const depth = (c: Cell) => (t.front === 'left' ? TOWER.cols - 1 - c.col : c.col);
   const by = (f: (c: Cell) => number) => valid.reduce((a, b) => (f(b) < f(a) ? b : a));
   switch (where) {
     case 'front':
-      return by((c) => -c.col * 100 + c.floor);
+      return by((c) => -depth(c) * 100 + c.floor);
     case 'up':
-      return by((c) => -c.floor * 100 + c.col);
+      return by((c) => -c.floor * 100 + depth(c));
     case 'merge': {
       const near = valid.filter((c) => [c.col - 1, c.col + 1].some((n) => roomAt(t, n, c.floor)?.def === def));
-      if (near.length) return near.reduce((a, b) => (b.floor * 100 + b.col < a.floor * 100 + a.col ? b : a));
-      return by((c) => c.floor * 100 + c.col);
+      if (near.length) return near.reduce((a, b) => (b.floor * 100 + depth(b) < a.floor * 100 + depth(a) ? b : a));
+      return by((c) => c.floor * 100 + depth(c));
     }
     case 'back':
-      return by((c) => c.floor * 100 + c.col);
+      return by((c) => c.floor * 100 + depth(c));
   }
 }
 
@@ -61,7 +63,7 @@ export class AiController {
   /** Call once before every world.step(). */
   update(w: World): void {
     if (w.winner !== null || w.tick % THINK !== 0) return;
-    const t = w.towers[this.team];
+    const t = w.tower(this.team);
     const tapEvery = TAP_EVERY[this.level];
     if (tapEvery > 0 && w.tick > 0 && w.tick % tapEvery === 0) {
       for (const r of [...t.rooms]) if (r.buffer >= 1) w.issue({ type: 'collect', team: this.team, col: r.col, floor: r.floor });

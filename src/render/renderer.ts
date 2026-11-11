@@ -1,5 +1,5 @@
-/** Canvas 2D side-view renderer: sky, ground, lane, both towers, units, shots. Never mutates the sim. */
-import { LANE, MERGE_MULT, ROOMS, TOWER, UNITS } from '../sim/defs.ts';
+/** Canvas 2D side-view renderer: sky, ground, every tower on the axis, units, shots. Never mutates the sim. */
+import { MERGE_MULT, ROOMS, TOWER, UNITS } from '../sim/defs.ts';
 import { bufferCap, canAfford, buildCost, mergeGroups, placementError, roomAt, roomRate } from '../sim/tower.ts';
 import type { Room, Tower, Unit } from '../sim/types.ts';
 import { DT } from '../sim/world.ts';
@@ -8,22 +8,23 @@ import type { Camera } from './camera.ts';
 import {
   CELL_H,
   CELL_W,
-  ENEMY_X0,
-  FIELD_W,
   FRAME,
-  LANE_LEN,
   TOWER_H,
   TOWER_W,
   altToWorld,
   cellRect,
+  fieldBounds,
   laneToWorld,
   type Rect,
 } from './layout.ts';
 
 const RES_ICON = { minerals: '◆', gas: '▲' } as const;
 const RES_COLOR = { minerals: '#7cc6ff', gas: '#7ee08a' } as const;
-const TEAM_COLOR = ['#4cc3ff', '#ff5d5d'] as const;
-const TEAM_DARK = ['#1d5f86', '#8a2b2b'] as const;
+/** By team: player, hostile, neutral. */
+const TEAM_COLOR = ['#4cc3ff', '#ff5d5d', '#e8c56a'] as const;
+const TEAM_DARK = ['#1d5f86', '#8a2b2b', '#7a6224'] as const;
+const TOWER_FRAME = ['#3a3f58', '#4a3a48', '#4a4636'] as const;
+const TOWER_ROOF = ['#4b516e', '#5e4a5a', '#5e5944'] as const;
 /** Effects live this many ticks (matches the sim's TTL). */
 const FX_TICKS = 12;
 
@@ -54,7 +55,7 @@ export class Renderer {
     this.sky();
     const [ox, oy] = cam.toScreen(0, 0);
     ctx.setTransform(this.dpr * cam.zoom, 0, 0, this.dpr * cam.zoom, this.dpr * ox, this.dpr * oy);
-    this.ground();
+    this.ground(game);
     for (const t of game.world.towers) if (t) this.tower(game, t);
     this.placement(game);
     this.selection(game);
@@ -78,9 +79,10 @@ export class Renderer {
     ctx.fillRect(0, 0, cam.width, cam.height);
   }
 
-  private ground(): void {
+  private ground(game: Game): void {
     const { ctx } = this;
-    const left = -3000, right = FIELD_W + 3000;
+    const field = fieldBounds(game.world.towers);
+    const left = field.x0 - 3000, right = field.x1 + 3000;
     ctx.fillStyle = '#2e2a3d';
     ctx.beginPath();
     ctx.moveTo(left, 0);
@@ -92,29 +94,32 @@ export class Renderer {
     g.addColorStop(1, '#2a1f19');
     ctx.fillStyle = g;
     ctx.fillRect(left, 0, right - left, 2000);
-    // The lane: a packed-dirt road between the two lane faces.
+    // The road: packed dirt across the whole field (towers are drawn over it).
+    const road0 = field.x0 - 2 * CELL_W, road1 = field.x1 + 2 * CELL_W;
     ctx.fillStyle = '#7a6250';
-    ctx.fillRect(TOWER_W, 0, LANE_LEN, 22);
+    ctx.fillRect(road0, 0, road1 - road0, 22);
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.fillRect(TOWER_W, 18, LANE_LEN, 4);
+    ctx.fillRect(road0, 18, road1 - road0, 4);
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.lineWidth = 2;
     ctx.setLineDash([24, 18]);
-    line(ctx, TOWER_W + 20, 11, ENEMY_X0 - 20, 11);
+    line(ctx, road0, 11, road1, 11);
     ctx.setLineDash([]);
-    // Midfield marker.
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.fillRect(TOWER_W + LANE_LEN / 2 - 2, 0, 4, 22);
+    // Midfield marker between the outermost towers.
+    if (game.world.towers.length > 1) {
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect((field.x0 + field.x1) / 2 - 2, 0, 4, 22);
+    }
   }
 
   // ---- Towers -------------------------------------------------------------------
 
   private tower(game: Game, t: Tower): void {
     const { ctx } = this;
-    const x0 = t.team === 0 ? 0 : ENEMY_X0;
-    ctx.fillStyle = t.team === 0 ? '#3a3f58' : '#4a3a48';
+    const x0 = t.x * CELL_W;
+    ctx.fillStyle = TOWER_FRAME[t.team];
     ctx.fillRect(x0 - FRAME, -TOWER_H - FRAME, TOWER_W + FRAME * 2, TOWER_H + FRAME);
-    ctx.fillStyle = t.team === 0 ? '#4b516e' : '#5e4a5a';
+    ctx.fillStyle = TOWER_ROOF[t.team];
     ctx.fillRect(x0 - FRAME * 2, -TOWER_H - FRAME * 2.2, TOWER_W + FRAME * 4, FRAME * 1.4);
     ctx.fillStyle = '#161826';
     ctx.fillRect(x0, -TOWER_H, TOWER_W, TOWER_H);
@@ -124,16 +129,16 @@ export class Renderer {
     ctx.strokeStyle = '#2b2f45';
     ctx.lineWidth = 4;
     for (let f = 1; f < TOWER.floors; f++) line(ctx, x0, -f * CELL_H, x0 + TOWER_W, -f * CELL_H);
-    // Lane face (the side that gets hit).
+    // Front face(s): the side(s) that get hit.
     ctx.fillStyle = 'rgba(255,90,90,0.5)';
-    const fx = t.team === 0 ? TOWER_W + FRAME - 3 : ENEMY_X0 - FRAME;
-    ctx.fillRect(fx, -TOWER_H, 3, TOWER_H);
-    // Team flag on the roof.
+    if (t.front !== 'left') ctx.fillRect(x0 + TOWER_W + FRAME - 3, -TOWER_H, 3, TOWER_H);
+    if (t.front !== 'right') ctx.fillRect(x0 - FRAME, -TOWER_H, 3, TOWER_H);
+    // Team flag on the roof, pointing toward the front.
     ctx.fillStyle = TEAM_COLOR[t.team];
     const flagX = x0 + TOWER_W / 2;
     ctx.fillRect(flagX - 1.5, -TOWER_H - FRAME * 2.2 - 40, 3, 40);
     ctx.beginPath();
-    const fdir = t.team === 0 ? 1 : -1;
+    const fdir = t.front === 'left' ? -1 : 1;
     ctx.moveTo(flagX, -TOWER_H - FRAME * 2.2 - 40);
     ctx.lineTo(flagX + fdir * 30, -TOWER_H - FRAME * 2.2 - 32);
     ctx.lineTo(flagX, -TOWER_H - FRAME * 2.2 - 24);
@@ -142,7 +147,7 @@ export class Renderer {
     for (const g of mergeGroups(t)) {
       const first = g[0];
       const last = g[g.length - 1];
-      const rect = cellRect(first.col, first.floor, last.col + last.w - first.col, t.team);
+      const rect = cellRect(first.col, first.floor, last.col + last.w - first.col, t.x);
       this.room(game, t, g, inset(rect, 3));
     }
   }
@@ -192,7 +197,7 @@ export class Renderer {
     ctx.strokeStyle = 'rgba(0,0,0,0.25)';
     ctx.lineWidth = 2;
     for (let i = 1; i < group.length; i++) {
-      const sx = cellRect(group[i].col, group[i].floor, 1, t.team).x + (t.team === 0 ? 0 : CELL_W);
+      const sx = cellRect(group[i].col, group[i].floor, 1, t.x).x;
       line(ctx, sx, r.y + 6, sx, r.y + r.h - 10);
     }
     for (let i = 0; i < group.length * room.w; i++) {
@@ -269,7 +274,7 @@ export class Renderer {
     const list = [...game.world.units].sort((u, v) => Number(u.alt > 0) - Number(v.alt > 0) || u.depth - v.depth);
     // Spread each unit back from its sim position by its depth, so units at the same x read as a squad.
     for (const u of list) {
-      const spread = u.alt > 0 ? 0 : (u.team === 0 ? -1 : 1) * u.depth * 34;
+      const spread = u.alt > 0 ? 0 : -u.dir * u.depth * 34;
       this.unit(game, u, laneToWorld(u.px + (u.x - u.px) * a) + spread);
     }
   }
@@ -277,7 +282,7 @@ export class Renderer {
   private unit(game: Game, u: Unit, x: number): void {
     const { ctx } = this;
     const d = UNITS[u.def];
-    const dir = u.team === 0 ? 1 : -1;
+    const dir = u.dir;
     const body = TEAM_COLOR[u.team];
     const dark = TEAM_DARK[u.team];
     const fighting = u.target !== null;
@@ -344,8 +349,8 @@ export class Renderer {
         const fx = laneToWorld(e.fx), fy = e.falt > 0 ? altToWorld(e.falt) : -14;
         let tx: number, ty: number;
         if (e.room) {
-          const r = cellRect(e.room.col, e.room.floor, e.room.w, e.room.team);
-          tx = e.room.team === 0 ? r.x + r.w - 8 : r.x + 8;
+          const r = cellRect(e.room.col, e.room.floor, e.room.w, e.room.x);
+          tx = e.room.side === 'right' ? r.x + r.w - 8 : r.x + 8;
           ty = r.y + r.h / 2;
         } else {
           tx = laneToWorld(e.tx);
@@ -363,7 +368,7 @@ export class Renderer {
           ctx.fill();
         }
       } else if (e.kind === 'destroyed') {
-        const r = cellRect(e.col, e.floor, 1, e.team);
+        const r = cellRect(e.col, e.floor, 1, e.x);
         ctx.globalAlpha = 1 - age;
         ctx.fillStyle = '#ffb347';
         ctx.beginPath();
@@ -390,7 +395,7 @@ export class Renderer {
       for (let c = 0; c < TOWER.cols; c++) {
         if (placementError(t, game.placing, c, f)) continue;
         const ok = canAfford(t.bank, buildCost(t, game.placing, c, f));
-        const r = inset(cellRect(c, f), 4);
+        const r = inset(cellRect(c, f, 1, t.x), 4);
         ctx.strokeStyle = ok ? 'rgba(120,255,160,0.55)' : 'rgba(255,200,120,0.4)';
         ctx.lineWidth = 2;
         ctx.setLineDash([8, 6]);
@@ -401,7 +406,7 @@ export class Renderer {
     const h = game.hover;
     if (h) {
       const ok = !placementError(t, game.placing, h.col, h.floor) && canAfford(t.bank, buildCost(t, game.placing, h.col, h.floor));
-      const r = inset(cellRect(h.col, h.floor), 3);
+      const r = inset(cellRect(h.col, h.floor, 1, t.x), 3);
       ctx.fillStyle = ok ? 'rgba(120,255,160,0.25)' : 'rgba(255,90,90,0.25)';
       ctx.fillRect(r.x, r.y, r.w, r.h);
       this.label(ROOMS[game.placing].name, r.x + r.w / 2, r.y + r.h / 2, r.w, ok ? '#c8ffd8' : '#ffb3b3');
@@ -413,7 +418,7 @@ export class Renderer {
     if (!s) return;
     const room = roomAt(game.tower, s.col, s.floor);
     if (!room) return;
-    const r = inset(cellRect(room.col, room.floor, room.w), 1);
+    const r = inset(cellRect(room.col, room.floor, room.w, game.tower.x), 1);
     this.ctx.strokeStyle = '#fff';
     this.ctx.lineWidth = 3;
     this.ctx.strokeRect(r.x, r.y, r.w, r.h);
@@ -435,7 +440,7 @@ export class Renderer {
     ctx.globalAlpha = 1;
   }
 
-  /** Screen-space strip showing the whole lane, so you can watch the front while looking at your tower. */
+  /** Screen-space strip showing the whole field (towers and units), so you can watch the front while looking at your tower. */
   private laneStrip(game: Game): void {
     const { ctx, cam } = this;
     const availW = cam.width - cam.insets.left - cam.insets.right;
@@ -447,13 +452,17 @@ export class Renderer {
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     ctx.fillRect(x0, y + 5, w, 2);
     ctx.fillRect(x0 + w / 2 - 1, y - 2, 2, 10);
-    // Tower ends.
-    ctx.fillStyle = TEAM_COLOR[0];
-    ctx.fillRect(x0 - 10, y - 5, 8, 14);
-    ctx.fillStyle = TEAM_COLOR[1];
-    ctx.fillRect(x0 + w + 2, y - 5, 8, 14);
+    // Map axis cells onto the strip; each tower is a block as wide as it is.
+    const towers = game.world.towers;
+    const c0 = Math.min(...towers.map((t) => t.x));
+    const c1 = Math.max(...towers.map((t) => t.x + TOWER.cols));
+    const sx = (x: number) => x0 + ((x - c0) / Math.max(1, c1 - c0)) * w;
+    for (const t of towers) {
+      ctx.fillStyle = TEAM_COLOR[t.team];
+      ctx.fillRect(sx(t.x), y - 5, Math.max(6, sx(t.x + TOWER.cols) - sx(t.x)), 14);
+    }
     for (const u of game.world.units) {
-      const ux = x0 + (u.x / LANE.length) * w;
+      const ux = sx(u.x);
       ctx.fillStyle = TEAM_COLOR[u.team];
       if (UNITS[u.def].air) {
         ctx.beginPath();

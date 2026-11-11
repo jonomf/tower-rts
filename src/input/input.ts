@@ -23,7 +23,7 @@ export function attachInput(canvas: HTMLCanvasElement, game: Game, cam: Camera, 
   };
   const cellUnder = (sx: number, sy: number) => {
     const [wx, wy] = cam.toWorld(sx, sy);
-    return cellAt(wx, wy);
+    return cellAt(game.tower, wx, wy);
   };
 
   canvas.addEventListener('pointerdown', (e) => {

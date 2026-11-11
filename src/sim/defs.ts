@@ -144,7 +144,7 @@ export const PALETTE: RoomId[] = ['mine', 'refinery', 'quarters', 'barracks', 'h
 export const TOWER = {
   cols: 6,
   floors: 8,
-  /** Column cols-1 faces the lane. The Core sits at the back of floor 0 (columns 0..width-1). */
+  /** Default Core column for a tower whose front is on the right (the Core sits at the back of floor 0). */
   coreCol: 0,
 };
 

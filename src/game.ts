@@ -71,7 +71,7 @@ export class Game {
     for (const ai of this.ais) ai.update(w);
     w.step();
     if (!wasOvertime && w.inOvertime) this.notify('Overtime! Both Cores are burning.', 'error');
-    if (this.time - this.lastAlert > 10 && w.effects.some((e) => e.kind === 'shot' && e.room?.team === this.team && e.tick === w.tick - 1)) {
+    if (this.time - this.lastAlert > 10 && w.effects.some((e) => e.kind === 'shot' && e.room?.x === this.tower.x && e.tick === w.tick - 1)) {
       this.lastAlert = this.time;
       this.notify('Your tower is under attack!', 'error');
     }
@@ -159,7 +159,7 @@ export class Game {
     const res = this.world.issue({ type: 'collect', team: this.team, col: cell.col, floor: cell.floor });
     if (res.ok && res.gained) {
       const first = group[0];
-      const rect = cellRect(first.col, first.floor, group.length * first.w);
+      const rect = cellRect(first.col, first.floor, group.length * first.w, this.tower.x);
       this.float(rect.x + rect.w / 2, rect.y + CELL_H * 0.2, res.gained);
     }
   }
@@ -169,7 +169,7 @@ export class Game {
     if (!r) return;
     const res = this.issue({ type: r.built ? 'demolish' : 'cancel', team: this.team, col: r.col, floor: r.floor });
     if (res.ok) {
-      const rect = cellRect(r.col, r.floor, r.w);
+      const rect = cellRect(r.col, r.floor, r.w, this.tower.x);
       if (res.gained) this.float(rect.x + rect.w / 2, rect.y + CELL_H * 0.3, res.gained);
       this.selected = null;
     }
