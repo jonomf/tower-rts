@@ -213,6 +213,13 @@ export class Game {
     this.issue({ type: 'setDeploy', team: this.team, col: cell.col, floor: cell.floor, deploy });
   }
 
+  /** Army ↔ Build: pause or resume every production room at once. */
+  togglePosture(): void {
+    const next = this.tower.posture === 'army' ? 'build' : 'army';
+    if (this.issue({ type: 'setPosture', team: this.team, posture: next }).ok)
+      this.notify(next === 'build' ? 'Build posture: all training paused. Save up for rooms.' : 'Army posture: training resumed.');
+  }
+
   recall(): void {
     if (this.issue({ type: 'recall', team: this.team }).ok) this.notify('Recalled: every unit is heading home.');
   }

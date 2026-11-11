@@ -7,15 +7,20 @@ import type { World } from '../world.ts';
  * the bank covers the unit, and supply has room for it. Finished units leave the tower right away.
  * Rooms are served oldest first, and a room that is waiting on resources holds its price back from the
  * rooms after it, so cheap units can't starve an expensive one forever.
+ * In Build posture no room starts a new unit (one in progress still finishes).
+ * Each idle room records why it is waiting (`room.waiting`), for the client.
  */
 export function productionSystem(w: World, dt: number): void {
   for (const t of w.towers) {
     const held = { minerals: 0, gas: 0 };
     for (const r of t.rooms) {
       if (!r.built || !ROOMS[r.def].trains) continue;
-      if (!r.job && r.train) {
+      r.waiting = null;
+      if (!r.job && r.train && t.posture === 'build') r.waiting = 'posture';
+      else if (!r.job && r.train) {
         const u = UNITS[r.train];
-        if (w.supplyUsed(t) + u.supply <= supplyMax(t)) {
+        if (w.supplyUsed(t) + u.supply > supplyMax(t)) r.waiting = 'supply';
+        else {
           // Held-back resources only block a unit that needs that resource.
           const free = {
             minerals: u.cost.minerals > 0 ? t.bank.minerals - held.minerals : 0,
@@ -26,6 +31,7 @@ export function productionSystem(w: World, dt: number): void {
             t.bank.gas -= u.cost.gas;
             r.job = { unit: r.train, progress: 0 };
           } else {
+            r.waiting = free.gas < u.cost.gas ? 'gas' : 'minerals';
             held.minerals += u.cost.minerals;
             held.gas += u.cost.gas;
           }

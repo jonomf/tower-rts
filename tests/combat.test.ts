@@ -307,3 +307,47 @@ test('a neutral tower between the sides is never targeted, and neither are its u
   assert.equal(local.hp, localHp, 'neutral unit untouched');
   assert.equal(w.winner, null);
 });
+
+// ---- Waiting reasons and posture -----------------------------------------------------
+
+test('an idle production room says what it is waiting for: minerals, gas or supply', () => {
+  const w = solo();
+  const t = w.tower(0);
+  place(w, 0, 'barracks', 2, 0);
+  builtNow(w);
+  const r = roomAt(t, 2, 0)!;
+  t.bank = { minerals: 10, gas: 0 };
+  w.step();
+  assert.equal(r.waiting, 'minerals');
+  w.issue({ type: 'setTrain', team: 0, col: 2, floor: 0, unit: 'bruiser' });
+  t.bank = { minerals: 500, gas: 0 };
+  w.step();
+  assert.equal(r.waiting, 'gas');
+  t.bank = { minerals: 100000, gas: 100000 };
+  w.step();
+  assert.equal(r.waiting, null, 'training now');
+  w.stepSeconds(60);
+  assert.equal(r.waiting, 'supply', 'base supply (6) is full of Bruisers');
+});
+
+test('Build posture stops new units (the one in training finishes); Army resumes', () => {
+  const w = solo();
+  const t = w.tower(0);
+  place(w, 0, 'barracks', 2, 0);
+  builtNow(w);
+  const r = roomAt(t, 2, 0)!;
+  w.step();
+  assert.ok(r.job, 'training');
+  assert.equal(w.issue({ type: 'setPosture', team: 0, posture: 'build' }).ok, true);
+  assert.equal(w.issue({ type: 'setPosture', team: 0, posture: 'build' }).ok, false, 'already set');
+  w.stepSeconds(UNITS.trooper.trainTime);
+  assert.equal(w.units.length, 1, 'the unit in training finished');
+  const bank = t.bank.minerals;
+  w.stepSeconds(30);
+  assert.equal(w.units.length, 1, 'nothing new');
+  assert.equal(r.waiting, 'posture');
+  assert.ok(t.bank.minerals > bank, 'the bank grows instead');
+  w.issue({ type: 'setPosture', team: 0, posture: 'army' });
+  w.step();
+  assert.ok(r.job, 'training again');
+});

@@ -15,6 +15,7 @@ export class Hud {
   private readonly clock = $('#clock');
   private readonly pauseBtn = $<HTMLButtonElement>('#pause');
   private readonly speedBtn = $<HTMLButtonElement>('#speed');
+  private readonly postureBtn = $<HTMLButtonElement>('#posture');
   private readonly palette = $('#palette');
   private readonly panel = $('#panel');
   private readonly toast = $('#toast');
@@ -40,6 +41,7 @@ export class Hud {
     }
     this.pauseBtn.addEventListener('click', () => game.togglePause());
     this.speedBtn.addEventListener('click', () => game.rotateSpeed());
+    this.postureBtn.addEventListener('click', () => game.togglePosture());
     $('#debug').addEventListener('click', () => (game.debug = !game.debug));
     $('#help-btn').addEventListener('click', () => this.help.classList.toggle('open'));
     $('#help-close').addEventListener('click', () => this.help.classList.remove('open'));
@@ -139,6 +141,12 @@ export class Hud {
     const s = Math.floor(g.world.seconds);
     set(this.clock, `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
     this.clock.classList.toggle('overtime', g.world.inOvertime);
+    const build = t.posture === 'build';
+    set(this.postureBtn, build ? 'Build' : 'Army');
+    this.postureBtn.classList.toggle('on', build);
+    this.postureBtn.title = build
+      ? 'Build posture: no new units (saving for rooms). Click for Army. (B)'
+      : 'Army posture: rooms train units. Click for Build to pause all training. (B)';
     set(this.pauseBtn, g.paused ? '▶' : '❚❚');
     this.pauseBtn.classList.toggle('on', g.paused);
     set(this.speedBtn, `${g.speed}×`);
@@ -204,7 +212,9 @@ export class Hud {
     const out = g.world.units.filter((u) => u.team === g.team && u.order === 'march').length;
     const home = g.world.units.filter((u) => u.team === g.team && u.order === 'garrison').length;
     const explored = g.world.map ? g.world.map.explored.filter(Boolean).length : 0;
-    const hint = !has('mine')
+    const hint = t.posture === 'build' && has('barracks')
+      ? 'Build posture: no new units. Switch to Army to train again.'
+      : !has('mine')
       ? 'Build Mines, then tap them to collect.'
       : !has('barracks') && !has('hangar')
         ? 'Build a Barracks to train units.'
@@ -281,9 +291,13 @@ export class Hud {
         lines.push(`Training ${u.name}: ${Math.floor((r.job.progress / u.trainTime) * 100)}%`);
       } else if (!r.train) lines.push('Paused');
       else {
-        const u = UNITS[r.train];
-        const why = g.world.supplyUsed(g.team) + u.supply > supplyMax(g.tower) ? 'supply (build Quarters)' : 'resources';
-        lines.push(`Waiting for ${why}`);
+        const why = {
+          minerals: 'Waiting for <i class="m">◆</i> minerals',
+          gas: `Waiting for <i class="g">▲</i> gas${g.tower.rooms.some((x) => x.def === 'refinery') ? '' : ' (build a Refinery)'}`,
+          supply: 'Waiting for <i class="s">☗</i> supply (build Quarters)',
+          posture: 'Paused: Build posture',
+        }[r.waiting ?? 'minerals'];
+        lines.push(why);
       }
       trainHtml = `<div class="acts train">${d.trains
         .map((id) => {
@@ -306,7 +320,7 @@ export class Hud {
     // Only rebuild the panel's buttons when its structure changes. Rebuilding on every progress tick
     // replaced a button between mousedown and mouseup, which swallowed clicks.
     const linesHtml = lines.map((l) => `<p>${l}</p>`).join('');
-    const key = JSON.stringify([r.id, r.built, removeErr, canCollect, group.length, r.train, r.deploy]);
+    const key = JSON.stringify([r.id, r.built, removeErr, canCollect, group.length, r.train, r.deploy, g.tower.posture]);
     if (key === this.panelKey) {
       this.setLines(linesHtml);
       return;

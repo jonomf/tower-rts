@@ -143,7 +143,8 @@ i.s { color: var(--s); }
 @media (max-width: 480px) {
   #topbar { gap: 4px; }
   #topbar .res { min-width: 0; font-size: 15px; margin-right: 6px; }
-  #topbar .clock { min-width: 0; }
+  #topbar .clock { min-width: 0; margin-left: 2px; font-size: 14px; }
+  #posture { min-width: 0 !important; padding: 0 8px !important; }
   #topbar button { min-width: 34px; padding: 0 6px; }
   #debug { display: none; }
   #palette { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -189,6 +190,8 @@ i.s { color: var(--s); }
 #gameover button { min-height: 44px; padding: 0 22px; font-weight: 700; }
 
 #topbar .clock.overtime { color: #ff7a7a; }
+#posture { min-width: 58px !important; font-weight: 700; }
+#posture.on { background: rgba(255, 200, 87, 0.18); }
 
 /* ---- Start menu ---- */
 #menu { position: fixed; inset: 0; z-index: 6; background: rgba(8, 9, 16, 0.72); display: none; align-items: center; justify-content: center; padding: 12px; }

@@ -11,7 +11,7 @@ export type TowerPlacement = { x: number; front: Front; coreCol: number };
 export function createTower(id: TowerId, team: Team, at: TowerPlacement): Tower {
   const grid: (RoomInstId | null)[][] = [];
   for (let f = 0; f < TOWER.floors; f++) grid.push(new Array<RoomInstId | null>(TOWER.cols).fill(null));
-  return { id, team, ...at, bank: { ...ECON.startBank }, rooms: [], grid, income: { minerals: 0, gas: 0 } };
+  return { id, team, ...at, posture: 'army', bank: { ...ECON.startBank }, rooms: [], grid, income: { minerals: 0, gas: 0 } };
 }
 
 /** World x of a tower's face. */
@@ -87,6 +87,7 @@ export function placeRoom(t: Tower, id: RoomInstId, def: RoomId, col: number, fl
     train: d.trains?.[0] ?? null,
     job: null,
     deploy: null,
+    waiting: null,
   };
   t.rooms.push(r);
   for (let c = col; c < col + d.width; c++) t.grid[floor][c] = id;

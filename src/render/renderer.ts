@@ -2,7 +2,7 @@
 import { MAP, MERGE_MULT, ROOMS, TOWER, UNITS, type SiteKind } from '../sim/defs.ts';
 import { mapSpan, sectorCenter, sectorOf } from '../sim/map.ts';
 import { visibleSectors } from '../sim/systems/explore.ts';
-import type { WorldMap } from '../sim/types.ts';
+import type { Waiting, WorldMap } from '../sim/types.ts';
 import { bufferCap, canAfford, buildCost, mergeGroups, placementError, roomAt, roomRate } from '../sim/tower.ts';
 import type { Room, Tower, Unit } from '../sim/types.ts';
 import { DT } from '../sim/world.ts';
@@ -30,6 +30,14 @@ const TOWER_FRAME = ['#3a3f58', '#4a3a48', '#4a4636'] as const;
 const TOWER_ROOF = ['#4b516e', '#5e4a5a', '#5e5944'] as const;
 /** Effects live this many ticks (matches the sim's TTL). */
 const FX_TICKS = 12;
+
+/** What an idle production room shows: the thing it is waiting for. */
+const WAIT_LOOK: Record<Waiting, { text: string; color: string }> = {
+  minerals: { text: 'needs ◆', color: '#7cc6ff' },
+  gas: { text: 'needs ▲', color: '#7ee08a' },
+  supply: { text: 'needs ☗', color: '#f4a6b8' },
+  posture: { text: 'build mode', color: '#ffc857' },
+};
 
 /** Icon and colour for a discovered site, on the map and on the sector strip. */
 const SITE_ICON: Record<SiteKind, { icon: string; color: string; label: string }> = {
@@ -269,7 +277,9 @@ export class Renderer {
         this.label(u.name, r.x + r.w / 2, r.y + r.h * 0.64, r.w, u.color, 0.75);
         bar(ctx, r.x + 6, r.y + r.h - 7, r.w - 12, 4, room.job.progress / u.trainTime, u.color);
       } else {
-        this.label(room.train ? 'waiting' : 'paused', r.x + r.w / 2, r.y + r.h * 0.64, r.w, 'rgba(255,255,255,0.5)', 0.75);
+        const need = room.train ? WAIT_LOOK[room.waiting ?? 'minerals'] : null;
+        if (need) this.label(need.text, r.x + r.w / 2, r.y + r.h * 0.64, r.w, need.color, 0.8);
+        else this.label('paused', r.x + r.w / 2, r.y + r.h * 0.64, r.w, 'rgba(255,255,255,0.5)', 0.75);
       }
     }
     this.hpBar(group, r);

@@ -35,7 +35,15 @@ export type Room = {
   job: { unit: UnitId; progress: number } | null;
   /** Production rooms: where new units go. null = the tower's default (see defaultDeploy). */
   deploy: Deploy | null;
+  /** Production rooms: why no unit is in training right now (set each tick), or null if one is. */
+  waiting: Waiting | null;
 };
+
+/** Why a production room isn't training: short of a resource, out of supply, or the tower is in Build posture. */
+export type Waiting = 'minerals' | 'gas' | 'supply' | 'posture';
+
+/** army: production rooms train as usual. build: no room starts a new unit (one in progress finishes). */
+export type Posture = 'army' | 'build';
 
 /** Where a production room sends new units: hold at the home tower, or march out of its left or right face. */
 export type Deploy = 'home' | 'left' | 'right';
@@ -104,6 +112,7 @@ export type Tower = {
   /** Leftmost column of the Core (on floor 0). */
   coreCol: number;
   front: Front;
+  posture: Posture;
   bank: Cost;
   rooms: Room[];
   /** grid[floor][col] = room id or null. */
@@ -122,6 +131,7 @@ export type Command =
   | (TowerRef & { type: 'collect'; col: number; floor: number })
   | (TowerRef & { type: 'setTrain'; col: number; floor: number; unit: UnitId | null })
   | (TowerRef & { type: 'setDeploy'; col: number; floor: number; deploy: Deploy })
+  | (TowerRef & { type: 'setPosture'; posture: Posture })
   /** Every unit of the team that has a home tower goes back to garrison it. */
   | { type: 'recall'; team: Team }
   /** Every garrisoned unit of the team marches out in `dir`. */

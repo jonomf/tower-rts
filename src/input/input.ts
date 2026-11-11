@@ -123,6 +123,7 @@ export function attachInput(
     else if (k === '-' || k === '_') game.cycleSpeed(-1);
     else if (k === '=' || k === '+') game.cycleSpeed(1);
     else if (k === '`') game.debug = !game.debug;
+    else if (k === 'b' || k === 'B') game.togglePosture();
     else if (k >= '1' && k <= String(PALETTE.length)) game.togglePlacing(PALETTE[Number(k) - 1]);
     else if ((k === 'Delete' || k === 'Backspace') && game.selected) game.demolishOrCancel(game.selected);
   });

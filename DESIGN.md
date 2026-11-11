@@ -62,6 +62,9 @@ Production rooms train their picked unit on repeat; each job is paid when it sta
 Intended counters: Bruiser > Trooper swarm · Trooper/Flak/Interceptor > Flyer · Flyer > Bruiser and Walker · Gun Nest > ground waves · Walker > turrets and walls.
 
 ## Production order
+A tower has a **posture**: Army (rooms train as usual) or Build (no room starts a new unit; one in training finishes).
+An idle production room records why it waits: minerals, gas, supply, or posture; the room shows the matching icon.
+
 Rooms are served oldest first. A room that can't afford its unit holds that price back from the rooms after it
 (only for resources the later unit needs), so cheap units can't starve an expensive one.
 

@@ -93,6 +93,13 @@ export function applyCommand(w: World, cmd: Command): CommandResult {
       return { ok: true, gained: refund };
     }
 
+    case 'setPosture': {
+      if (cmd.posture !== 'army' && cmd.posture !== 'build') return fail('Unknown posture');
+      if (t.posture === cmd.posture) return fail('Already set');
+      t.posture = cmd.posture;
+      return { ok: true };
+    }
+
     case 'setDeploy': {
       const r = roomAt(t, cmd.col, cmd.floor);
       if (!r || !ROOMS[r.def].trains) return fail('This room doesn’t train units');
