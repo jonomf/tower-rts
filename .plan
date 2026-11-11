@@ -54,9 +54,12 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
 - [x] `pickCell` in the AI mirrors `front`/`back` by `tower.front`.
 - [x] Renderer: draw every tower at `tower.x × CELL_W` with no mirroring; `laneToWorld(x) = x × CELL_W`. Camera presets
       cycle through known towers.
-- [ ] Tests: all 38 still pass after mechanical updates. Add: a tower hit from the left loses column 0 first; three towers
+- [x] Tests: all 38 still pass after mechanical updates. Add: a tower hit from the left loses column 0 first; three towers
       on one axis; `hostile()` table; a neutral tower is never targeted.
 - Exit: Skirmish plays exactly as before (`npm run match -- --all` numbers within noise of `docs/plan-v1.md`).
+  ✅ Identical, line for line (e.g. rush vs boom 2-38 avg 3:53; boom mirror 22-18 avg 4:24). 44 tests.
+  Known, unchanged from M3: a perfectly symmetric overtime tie goes to team 0 (`score(0) >= score(1)`), which is why
+  the Rusher mirror reads 40-0. Skirmish-only; Expedition has no overtime.
 
 ## P2: sectors, fog, exploring, deploy orders
 - [ ] `src/sim/map.ts`: sectors of `SECTOR = 14` cells, indices `−R..R` (`R = 5`), home tower centred in sector 0.
@@ -122,6 +125,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-11: P1 done: commands take a tower id, neutral team + hostile(), units have dir/home, 6 new tests (44)
 - 2026-11-11: P1 coordinates: towers on one axis, world-oriented columns, frontRoom from either side. `match --all` identical to M3
 - 2026-11-11: build emits per-build JS folders (Pages cache served old scripts with new HTML)
 - 2026-11-11: P0 permanent room panel (right column / left column / portrait strip, tower summary). Waiting on Jono for P0 exit

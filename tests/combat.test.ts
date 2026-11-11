@@ -253,3 +253,57 @@ test('units carry a direction and a home tower; supply counts only units whose h
   assert.equal(w.supplyUsed(outpost), UNITS.bruiser.supply);
   assert.equal(w.supplyUsed(0), UNITS.trooper.supply, 'a team number means its home tower');
 });
+
+test('a tower attacked from its left loses column 0 first; its other face is untouched', () => {
+  const w = arena();
+  const home = w.tower(0); // faces right; its left face is at x = 0
+  place(w, 0, 'wall', 2, 0);
+  place(w, 0, 'wall', 5, 0);
+  builtNow(w);
+  const raider = w.spawnUnit('bruiser', 1, 0, home);
+  raider.x = raider.px = -8;
+  raider.dir = 1;
+  w.stepSeconds(20);
+  assert.equal(raider.target?.kind, 'room');
+  assert.ok(raider.x < 0, `stopped on the left at ${raider.x}`);
+  assert.ok(coreOf(home)!.hp < ROOMS.core.hp, 'the Core (column 0-1) takes the hits');
+  assert.equal(roomAt(home, 2, 0)!.hp, ROOMS.wall.hp);
+  assert.equal(roomAt(home, 5, 0)!.hp, ROOMS.wall.hp, 'the lane-side wall is never touched');
+});
+
+test('three towers on one axis: units hit the nearest hostile tower ahead and walk past friendly ones', () => {
+  const w = arena();
+  const near = w.tower(1); // x = 22, faces left
+  const far = w.addTower(1, { x: 40, front: 'left', coreCol: 4 });
+  assert.deepEqual(w.towers.map((t) => t.x), [0, near.x, far.x]);
+  const mine = w.spawnUnit('trooper', 0, 0);
+  w.stepSeconds(25);
+  assert.equal(mine.target?.kind, 'room');
+  assert.equal(mine.target?.kind === 'room' && mine.target.tower, near.id, 'the nearer hostile tower');
+  // In a fresh world, a unit from the far tower walks straight through its own team's nearer tower.
+  const w2 = arena();
+  const near2 = w2.tower(1);
+  const far2 = w2.addTower(1, { x: 40, front: 'left', coreCol: 4 });
+  const theirs = w2.spawnUnit('bruiser', 1, 0, far2);
+  assert.equal(theirs.x, far2.x);
+  w2.stepSeconds(25); // 0.8 cells/s: 20 cells, from x=40 to x=20, past the near tower (x 22-28)
+  assert.ok(theirs.x < near2.x, `walked past its own team's tower (x=${theirs.x})`);
+  assert.equal(theirs.target, null);
+  assert.ok(near2.rooms.every((r) => r.hp === ROOMS[r.def].hp), 'never hit its own team');
+});
+
+test('a neutral tower between the sides is never targeted, and neither are its units', () => {
+  const w = arena();
+  const trader = w.addTower(2, { x: 12, front: 'both', coreCol: 2 });
+  w.tower(2).bank = { minerals: 0, gas: 0 };
+  const trader0 = trader.rooms.map((r) => r.hp);
+  const local = w.spawnUnit('trooper', 2, 0, trader);
+  local.x = local.px = 13; // stand still inside the trader's footprint
+  const localHp = local.hp;
+  w.spawnUnit('trooper', 0, 0);
+  w.spawnUnit('trooper', 1, 0);
+  w.stepSeconds(40);
+  assert.deepEqual(trader.rooms.map((r) => r.hp), trader0, 'trader rooms untouched');
+  assert.equal(local.hp, localHp, 'neutral unit untouched');
+  assert.equal(w.winner, null);
+});

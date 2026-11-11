@@ -61,9 +61,11 @@ properties, and relative imports keep their `.ts` extension (tsc rewrites them t
 
 ## Layout
 ```
-src/sim/        defs.ts (all numbers: rooms, units, lane), types.ts, world.ts (tick, issue, hash, replay,
-                spawnUnit, damageRoom, supplyUsed), rng.ts, commands.ts, tower.ts (grid, support, merge, supply,
-                rubble cost), scenario.ts (dummy enemy), systems/{economy,production,units}.ts
+src/sim/        defs.ts (all numbers: rooms, units, lane), types.ts (Team 0/1/2, hostile(), opponent()),
+                world.ts (towers list, addTower, tower(team), towerById, tick, issue, hash, replay, spawnUnit,
+                damageRoom, supplyUsed), rng.ts, commands.ts (optional `tower` id on every command), tower.ts
+                (grid, support, merge, supply, rubble cost, faceOf, exitSide), scenario.ts (dummy enemy),
+                systems/{economy,production,units}.ts (units: towerAhead, frontRoom(tower, fromSide, air))
 src/ai/         types.ts (script format), scripts.ts (the scripts, as data), controller.ts (AiController, pickCell,
                 stepWithAi). The controller is outside the World and acts only through world.issue()
 src/game.ts     client state: match config + AIs, tick(), time control, selection, placing, floaters, toasts
@@ -74,6 +76,10 @@ public/         index.html, style.css, icon.svg (copied into dist/)
 tools/          build.ts, dev.ts, serve.ts, match.ts
 tests/          node:test, one file per system
 ```
+Coordinates: one world axis in cells. A tower spans `[x, x + TOWER.cols)`; columns are world-oriented (no mirroring);
+`front` is its lane side. Units have `x` on the same axis, `dir`, and `home` (tower id, for supply). Rendering is
+`x * CELL_W` everywhere (`src/render/layout.ts`).
+
 `window.game` and `window.cam` are exposed for the console and for screenshot scripts. Fast-forward with `game.tick()`
 (not `world.step()`, which skips the AI).
 
