@@ -62,7 +62,7 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
   the Rusher mirror reads 40-0. Skirmish-only; Expedition has no overtime.
 
 ## P2: sectors, fog, exploring, deploy orders
-- [ ] `src/sim/map.ts`: sectors of `SECTOR = 14` cells, indices `−R..R` (`R = 5`), home tower centred in sector 0.
+- [x] `src/sim/map.ts`: sectors of `SECTOR = 14` cells, indices `−R..R` (`R = 5`), home tower centred in sector 0.
       `sectorOf(x)`. Seeded generation: each non-home sector gets one site from a weighted table (see `docs/expedition.md`),
       with guarantees: exactly one Stronghold at distance 3–5 on a random side, exactly one Trader at distance 2–4,
       at least one Cache within distance 2, no Camp at distance 1.
@@ -125,6 +125,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-11: P2 map generation + Expedition world mode (home tower x=-3, front both, Core cols 2-3)
 - 2026-11-11: P1 done: commands take a tower id, neutral team + hostile(), units have dir/home, 6 new tests (44)
 - 2026-11-11: P1 coordinates: towers on one axis, world-oriented columns, frontRoom from either side. `match --all` identical to M3
 - 2026-11-11: build emits per-build JS folders (Pages cache served old scripts with new HTML)

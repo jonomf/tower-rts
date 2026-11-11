@@ -1,4 +1,4 @@
-import type { Cost, RoomId, UnitId } from './defs.ts';
+import type { Cost, RoomId, SiteKind, UnitId } from './defs.ts';
 
 /** 0: the player. 1: hostile to the player. 2: neutral (a trader; at war with no one). */
 export type Team = 0 | 1 | 2;
@@ -110,3 +110,23 @@ export type Command =
   | (TowerRef & { type: 'setTrain'; col: number; floor: number; unit: UnitId | null });
 
 export type CommandResult = { ok: true; gained?: Cost } | { ok: false; reason: string };
+
+/** One sector's point of interest (Expedition). */
+export type Site = {
+  sector: number;
+  kind: SiteKind;
+  /** A player unit has entered the sector. */
+  discovered: boolean;
+  /** Caches: already looted. */
+  claimed: boolean;
+  /** Caches: what's inside. */
+  loot: Cost;
+};
+
+/** The Expedition map: sectors -radius..radius. Arrays are indexed by sector + radius. */
+export type WorldMap = {
+  radius: number;
+  sites: Site[];
+  /** Terrain seen at least once (fog lifted). */
+  explored: boolean[];
+};

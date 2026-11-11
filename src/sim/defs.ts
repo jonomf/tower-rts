@@ -250,3 +250,30 @@ export const OVERTIME = {
   /** Core hp lost per second. */
   burn: 10,
 };
+
+// ---- Expedition map (docs/expedition.md) ------------------------------------------
+
+export const MAP = {
+  /** Cells per sector. Sector s spans [s*sector - sector/2, s*sector + sector/2). */
+  sector: 14,
+  /** Sectors run from -radius to +radius; the home tower is centred in sector 0. */
+  radius: 5,
+  /** Sectors within this distance start with their terrain explored (their sites are still found on entry). */
+  startExplored: 1,
+};
+
+export type SiteKind = 'home' | 'empty' | 'cache' | 'ruin' | 'camp' | 'stronghold' | 'trader';
+
+export const SITES = {
+  /** Weighted table for non-home sectors, before the guaranteed sites are placed. */
+  weights: { empty: 3, cache: 3, ruin: 1, camp: 3 } as Record<'empty' | 'cache' | 'ruin' | 'camp', number>,
+  /** Distance range (inclusive) for the one Stronghold and the one Trader. */
+  stronghold: [3, 5] as [number, number],
+  trader: [2, 4] as [number, number],
+  /** At least one Cache within this distance; no Camp within this distance; at most this many Camps per side. */
+  cacheWithin: 2,
+  noCampWithin: 1,
+  maxCampsPerSide: 2,
+  /** Cache loot: minerals in [min, max], with a gasChance of [gasMin, gasMax] gas, +perSector for each sector beyond 1. */
+  cacheLoot: { min: 150, max: 300, gasChance: 0.3, gasMin: 50, gasMax: 100, perSector: 0.25 },
+};

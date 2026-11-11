@@ -5,8 +5,9 @@ import { constructionSystem, economySystem } from './systems/economy.ts';
 import { productionSystem } from './systems/production.ts';
 import { unitSystem } from './systems/units.ts';
 import { buildScenario, type ScenarioId } from './scenario.ts';
+import { generateMap } from './map.ts';
 import { coreOf, createTower, exitSide, faceOf, placeRoom, removeRoom, type TowerPlacement } from './tower.ts';
-import { opponent, type Command, type CommandResult, type Effect, type Room, type Team, type Tower, type TowerId, type Unit } from './types.ts';
+import { opponent, type Command, type CommandResult, type Effect, type Room, type Team, type Tower, type TowerId, type Unit, type WorldMap } from './types.ts';
 
 export const TICK_RATE = 20;
 export const DT = 1 / TICK_RATE;
@@ -19,7 +20,15 @@ export type WorldOptions = {
   autoCollectRate: number;
   /** Extra setup after the empty towers exist (e.g. the M2 dummy enemy). */
   scenario: ScenarioId;
+  /**
+   * skirmish: two towers across a lane (M3). expedition: one home tower (Core in the middle, both faces open) centred
+   * in sector 0 of a generated, fogged map; `teams` is ignored.
+   */
+  mode: 'skirmish' | 'expedition';
 };
+
+/** Expedition home tower: centred on x = 0, open on both sides, Core in the middle columns. */
+export const EXPEDITION_HOME: TowerPlacement = { x: -TOWER.cols / 2, front: 'both', coreCol: TOWER.cols / 2 - 1 };
 
 /** Render-only effects are kept this many ticks. */
 const EFFECT_TTL = 12;
@@ -43,6 +52,8 @@ export class World {
   readonly rng: Rng;
   /** Every tower on the axis, in creation order. */
   readonly towers: Tower[] = [];
+  /** Expedition only: sectors, sites and fog. */
+  readonly map: WorldMap | null = null;
   units: Unit[] = [];
   /** Render-only events (shots, deaths, destroyed rooms). Not part of the hash. */
   effects: Effect[] = [];
@@ -53,9 +64,13 @@ export class World {
   private nextId = 1;
 
   constructor(options: Partial<WorldOptions> = {}) {
-    this.options = { seed: 1, teams: [0], autoCollectRate: ECON.autoCollectRate, scenario: 'none', ...options };
+    this.options = { seed: 1, teams: [0], autoCollectRate: ECON.autoCollectRate, scenario: 'none', mode: 'skirmish', ...options };
     this.rng = new Rng(this.options.seed);
-    for (const team of this.options.teams) this.addTower(team, skirmishPlacement(team));
+    if (this.options.mode === 'expedition') {
+      this.options.teams = [0];
+      this.addTower(0, EXPEDITION_HOME);
+      this.map = generateMap(this.options.seed);
+    } else for (const team of this.options.teams) this.addTower(team, skirmishPlacement(team));
     buildScenario(this, this.options.scenario);
   }
 
@@ -193,7 +208,7 @@ export class World {
   /** Fingerprint of the full sim state. */
   hash(): string {
     return fnv1a(
-      JSON.stringify({ tick: this.tick, rng: this.rng.state, id: this.nextId, towers: this.towers, units: this.units, winner: this.winner }),
+      JSON.stringify({ tick: this.tick, rng: this.rng.state, id: this.nextId, towers: this.towers, units: this.units, map: this.map, winner: this.winner }),
     );
   }
 }
