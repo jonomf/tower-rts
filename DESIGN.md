@@ -71,3 +71,15 @@ Rooms are served oldest first. A room that can't afford its unit holds that pric
 By default the AI stops training to save for the next build (`saves: false` turns that off). After the order, standing
 rules fire when they hold and are affordable (`supplyCapped`, `bankOver`), and `rebuild` restores destroyed rooms.
 Levels: Relaxed never taps (40% producer income); Steady taps every 90 s (about 70%); Sharp taps every 3 s. It's the same shape the player-automation tie-in will use later.
+
+## Expedition (P2, in progress; design in docs/expedition.md)
+- One home tower centred on x = 0, open on both sides, Core in columns 3–4. The map is 11 sectors of 14 cells (−5..5).
+- Sites are generated per seed: Empty, Cache, Ruin, Camp, plus exactly one Stronghold (distance 3–5) and one Trader (2–4).
+  Camps, the Stronghold and the Trader are markers only until P3/P4.
+- Fog: sectors −1..1 start explored. A player unit entering a sector explores it and finds its site. You see sectors
+  holding your units or tower, and their neighbours; hostile units elsewhere are hidden.
+- Caches: the first of your units to reach the centre loots it (150–300 minerals, sometimes gas; more the farther out).
+- Each Barracks/Hangar has **Deploy: Left / Home / Right** (default Home here). Home units garrison the tower: they fight
+  hostiles within half a sector of home, then walk back. Left/Right units march, fight, and hold at the map's last sector.
+  **Recall** brings every unit home; **Send ◀ / ▶** marches the garrison out.
+- No win or loss yet (raids and the Stronghold come in P3/P4), and no overtime.

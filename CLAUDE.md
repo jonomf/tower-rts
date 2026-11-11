@@ -64,8 +64,9 @@ properties, and relative imports keep their `.ts` extension (tsc rewrites them t
 src/sim/        defs.ts (all numbers: rooms, units, lane), types.ts (Team 0/1/2, hostile(), opponent()),
                 world.ts (towers list, addTower, tower(team), towerById, tick, issue, hash, replay, spawnUnit,
                 damageRoom, supplyUsed), rng.ts, commands.ts (optional `tower` id on every command), tower.ts
-                (grid, support, merge, supply, rubble cost, faceOf, exitSide), scenario.ts (dummy enemy),
-                systems/{economy,production,units}.ts (units: towerAhead, frontRoom(tower, fromSide, air))
+                (grid, support, merge, supply, rubble cost, faceOf, exitSide, defaultDeploy), scenario.ts (dummy),
+                map.ts (Expedition sectors: sectorOf, sectorCenter, generateMap), systems/{economy,production,
+                units (orders: garrison/march; towerAhead, frontRoom), explore (fog, sites, caches, visibleSectors)}.ts
 src/ai/         types.ts (script format), scripts.ts (the scripts, as data), controller.ts (AiController, pickCell,
                 stepWithAi). The controller is outside the World and acts only through world.issue()
 src/game.ts     client state: match config + AIs, tick(), time control, selection, placing, floaters, toasts
@@ -80,7 +81,8 @@ Coordinates: one world axis in cells. A tower spans `[x, x + TOWER.cols)`; colum
 `front` is its lane side. Units have `x` on the same axis, `dir`, and `home` (tower id, for supply). Rendering is
 `x * CELL_W` everywhere (`src/render/layout.ts`).
 
-`window.game` and `window.cam` are exposed for the console and for screenshot scripts. Fast-forward with `game.tick()`
+`window.game`, `window.cam` and `window.renderer` (its `strip` rect, for strip taps) are exposed for the console and
+for screenshot scripts. Start Expedition in Playwright by clicking `#modes button` "Expedition" before `#start`. Fast-forward with `game.tick()`
 (not `world.step()`, which skips the AI).
 
 ## Port from docs/auto-rts (copy, then adapt)

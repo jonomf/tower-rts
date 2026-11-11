@@ -12,7 +12,16 @@ const TAP_SLOP = 10; // px a press may move and still count as a tap
 
 type P = { x: number; y: number; sx: number; sy: number };
 
-export function attachInput(canvas: HTMLCanvasElement, game: Game, cam: Camera, onUserCamera: () => void): void {
+/**
+ * `onScreenTap` gets first look at a tap in screen coordinates (e.g. the sector strip) and returns true if it used it.
+ */
+export function attachInput(
+  canvas: HTMLCanvasElement,
+  game: Game,
+  cam: Camera,
+  onUserCamera: () => void,
+  onScreenTap: (sx: number, sy: number) => boolean = () => false,
+): void {
   const pointers = new Map<number, P>();
   let dragged = false;
   let pinchDist = 0;
@@ -72,6 +81,7 @@ export function attachInput(canvas: HTMLCanvasElement, game: Game, cam: Camera, 
     if (!p) return;
     if (pointers.size === 0 && !dragged && e.type === 'pointerup' && e.button !== 2) {
       const [x, y] = local(e);
+      if (onScreenTap(x, y)) return;
       const cell = cellUnder(x, y);
       if (e.pointerType !== 'mouse') game.hover = cell;
       game.tap(cell);

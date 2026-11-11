@@ -76,13 +76,14 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       (advance, fight, attack hostile sites, stop at the map edge and hold). Commands `recall` (all → garrison) and
       `sendGarrison(dir)` (all garrison units → march).
 - [x] Sites as data. Cache: first player unit to reach it banks its loot (effect + toast). Ruin: nothing. Others in P3/P4.
-- [ ] Client: sector strip replaces the lane strip (fog shown as hatching, discovered sites as icons, tap a sector to move
+- [x] Client: sector strip replaces the lane strip (fog shown as hatching, discovered sites as icons, tap a sector to move
       the camera there); fog curtain drawn over unexplored sectors in the world view; Deploy buttons in the room panel;
       Recall / Send buttons in the tower summary.
-- [ ] Menu: mode picker (Expedition / Skirmish). Expedition is marked "new" but not default yet.
-- [ ] Tests: generation guarantees over 200 seeds; exploration reveals in order; garrison returns home; a cache pays once;
+- [x] Menu: mode picker (Expedition / Skirmish). Expedition is marked "new" but not default yet.
+- [x] Tests: generation guarantees over 200 seeds; exploration reveals in order; garrison returns home; a cache pays once;
       determinism + replay with deploy commands.
-- Exit: you can explore both directions, find caches, and see the fog lift.
+- Exit: you can explore both directions, find caches, and see the fog lift. ✅ Verified in headless Chromium at all
+  three sizes (deploy buttons, Send, fog lifting to 11/11, sites found, caches looted, strip taps). Waiting on Jono to try it.
 
 ## P3: raids and defense ← FEEL-TEST GATE
 - [ ] `src/sim/systems/director.ts`: a deterministic raid director. First raid at 2:30, then every 60–90 s (seeded),
@@ -127,6 +128,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-11: P2 done: client (sector strip, fog curtain, site signs, Deploy/Send/Recall, mode picker). 58 tests
 - 2026-11-11: P2 fog, discovery, caches (systems/explore.ts)
 - 2026-11-11: P2 deploy orders (garrison / march, recall, send). Skirmish match --all identical
 - 2026-11-11: P2 map generation + Expedition world mode (home tower x=-3, front both, Core cols 2-3)

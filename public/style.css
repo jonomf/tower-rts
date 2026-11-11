@@ -84,7 +84,7 @@ i.s { color: var(--s); }
    Desktop: a right-hand column. Landscape phone: a left-hand column (the palette is on the right). */
 #panel {
   position: fixed; z-index: 2; left: 0; right: 0; bottom: var(--pal-h, 120px); height: 120px;
-  display: grid; grid-template-columns: 2fr 3fr; gap: 10px; align-content: start;
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 10px; align-content: start;
   padding: 8px calc(10px + var(--safe-r)) 8px calc(10px + var(--safe-l));
   background: var(--ui); border-top: 1px solid var(--ui-line); overflow-y: auto;
 }
@@ -100,6 +100,17 @@ i.s { color: var(--s); }
 #panel .acts button { flex: 1; min-height: 36px; }
 #panel .cost { color: var(--dim); font-size: 13px; }
 #panel .dim { color: var(--dim); }
+#panel .sub { color: var(--dim); font-size: 12px; margin: 6px 0 2px; }
+#panel .acts.deploy button, #panel .acts.orders button { min-height: 34px; font-size: 13px; padding: 0 4px; white-space: nowrap; min-width: 0; }
+#panel .acts.deploy, #panel .acts.orders { gap: 6px; }
+#panel .acts.train button { min-width: 0; }
+#panel .acts.deploy button.on { background: rgba(255, 200, 87, 0.18); border-color: var(--accent); }
+#panel .sum-text { display: contents; }
+/* Strip layout: the Send/Recall row sits under the income lines, the rest in the right column. */
+#panel .summary .info { grid-column: 1; grid-row: 1; }
+#panel .summary .ctrl { grid-column: 2; grid-row: 1 / span 2; }
+#panel .summary .orders { grid-column: 1; grid-row: 2; margin-top: 0; }
+#panel .sub { margin-top: 4px; }
 /* Strip: unit buttons on one row, without the supply line, so Collect/Demolish still fit in 120 px. */
 #panel .acts.train { grid-auto-flow: column; grid-auto-columns: 1fr; }
 #panel .train button { font-size: 13px; }
@@ -192,6 +203,7 @@ i.s { color: var(--s); }
 #menu .choices button.on { border-color: var(--accent); background: rgba(255, 200, 87, 0.14); }
 #menu .choices button.on b { color: var(--accent); }
 #level-wrap.off { opacity: 0.35; pointer-events: none; }
+#skirmish-opts.hidden { display: none; }
 #start { width: 100%; margin-top: 14px; min-height: 48px; font-weight: 800; font-size: 17px; background: var(--accent); color: #1b1e2e; border-color: var(--accent); }
 #start:hover { background: #ffd67e !important; }
 #gameover .acts { gap: 8px; }

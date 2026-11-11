@@ -5,15 +5,28 @@
 import { ROOMS, type Cost, type RoomId, type UnitId } from './sim/defs.ts';
 import { groupOf, roomAt } from './sim/tower.ts';
 import { DT, World } from './sim/world.ts';
-import { PLAYER, type Command, type CommandResult, type Team } from './sim/types.ts';
+import { PLAYER, type Command, type CommandResult, type Deploy, type Team } from './sim/types.ts';
 import { CELL_H, CELL_W, cellRect, type Cell } from './render/layout.ts';
 import { AiController } from './ai/controller.ts';
 import { SCRIPTS } from './ai/scripts.ts';
 import type { AiLevel } from './ai/types.ts';
 
-/** Who you play against: an AI script id, or the static practice dummy. */
-export type MatchConfig = { opponent: string; level: AiLevel };
-export const DEFAULT_MATCH: MatchConfig = { opponent: 'rush', level: 'relaxed' };
+/**
+ * What to play. skirmish: against an AI script id, or the static practice dummy, at a level.
+ * expedition: one tower on a fogged map (opponent and level unused until raids arrive in P3).
+ */
+export type GameMode = 'skirmish' | 'expedition';
+export type MatchConfig = { mode: GameMode; opponent: string; level: AiLevel };
+export const DEFAULT_MATCH: MatchConfig = { mode: 'skirmish', opponent: 'rush', level: 'relaxed' };
+
+/** How a found site is announced. */
+const SITE_NAMES: Partial<Record<string, string>> = {
+  cache: 'a supply cache',
+  ruin: 'ruins (nothing left)',
+  camp: 'a raider camp',
+  stronghold: 'the enemy Stronghold',
+  trader: 'a trader',
+};
 
 export const SPEEDS = [0.5, 1, 2, 4];
 
@@ -37,6 +50,8 @@ export class Game {
   /** False while the start menu is up: the world is a backdrop and doesn't tick. */
   started = false;
   config: MatchConfig = { ...DEFAULT_MATCH };
+  /** Called after a match starts (the client re-frames the camera). */
+  onStart: () => void = () => {};
   private ais: AiController[] = [];
   private acc = 0;
   private hashAt = -1;
@@ -51,8 +66,11 @@ export class Game {
   start(config: MatchConfig = this.config): void {
     this.config = { ...config };
     const seed = Date.now() % 100000;
-    const script = SCRIPTS[config.opponent];
-    this.world = new World({ seed, teams: [0, 1], scenario: script ? 'none' : 'dummy' });
+    const expedition = config.mode === 'expedition';
+    const script = expedition ? undefined : SCRIPTS[config.opponent];
+    this.world = expedition
+      ? new World({ seed, mode: 'expedition' })
+      : new World({ seed, teams: [0, 1], scenario: script ? 'none' : 'dummy' });
     this.ais = script ? [new AiController(1, script, config.level, seed)] : [];
     this.started = true;
     this.placing = null;
@@ -61,7 +79,14 @@ export class Game {
     this.acc = 0;
     this.lastAlert = -100;
     this.paused = false;
-    this.notify(script ? `${script.name} is building. Mines first, then a Barracks.` : 'Practice: raze the dummy tower.');
+    this.onStart();
+    this.notify(
+      expedition
+        ? 'Build up, then set a Barracks to Deploy Left or Right to explore.'
+        : script
+          ? `${script.name} is building. Mines first, then a Barracks.`
+          : 'Practice: raze the dummy tower.',
+    );
   }
 
   /** One sim tick: AIs act, the world steps, alerts fire. */
@@ -71,6 +96,15 @@ export class Game {
     for (const ai of this.ais) ai.update(w);
     w.step();
     if (!wasOvertime && w.inOvertime) this.notify('Overtime! Both Cores are burning.', 'error');
+    for (const e of w.effects) {
+      if (e.tick !== w.tick - 1) continue;
+      if (e.kind === 'discovered' && SITE_NAMES[e.site]) {
+        this.notify(`Scouts found ${SITE_NAMES[e.site]} ${e.sector < 0 ? 'to the left' : 'to the right'} (sector ${Math.abs(e.sector)}).`);
+      } else if (e.kind === 'loot') {
+        this.float(e.x * CELL_W, -CELL_H * 1.2, e.gained);
+        this.notify(`Cache looted: +${Math.floor(e.gained.minerals)} minerals${e.gained.gas ? `, +${Math.floor(e.gained.gas)} gas` : ''}.`);
+      }
+    }
     if (this.time - this.lastAlert > 10 && w.effects.some((e) => e.kind === 'shot' && e.room?.x === this.tower.x && e.tick === w.tick - 1)) {
       this.lastAlert = this.time;
       this.notify('Your tower is under attack!', 'error');
@@ -173,6 +207,18 @@ export class Game {
       if (res.gained) this.float(rect.x + rect.w / 2, rect.y + CELL_H * 0.3, res.gained);
       this.selected = null;
     }
+  }
+
+  setDeploy(cell: Cell, deploy: Deploy): void {
+    this.issue({ type: 'setDeploy', team: this.team, col: cell.col, floor: cell.floor, deploy });
+  }
+
+  recall(): void {
+    if (this.issue({ type: 'recall', team: this.team }).ok) this.notify('Recalled: every unit is heading home.');
+  }
+
+  send(dir: 1 | -1): void {
+    if (this.issue({ type: 'sendGarrison', team: this.team, dir }).ok) this.notify(`Garrison marching ${dir < 0 ? 'left' : 'right'}.`);
   }
 
   setTrain(cell: Cell, unit: UnitId | null): void {

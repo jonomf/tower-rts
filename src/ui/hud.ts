@@ -1,9 +1,10 @@
 /** DOM HUD: top bar, build palette, selected-room panel, toasts, help. Rebuilt cheaply each frame via text diffing. */
 import { ECON, MERGE_MULT, PALETTE, ROOMS, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
-import { bufferCap, canAfford, coreOf, groupOf, mergeGroups, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
-import { DEFAULT_MATCH, type Game, type MatchConfig } from '../game.ts';
+import { bufferCap, canAfford, coreOf, defaultDeploy, groupOf, mergeGroups, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
+import { DEFAULT_MATCH, type Game, type GameMode, type MatchConfig } from '../game.ts';
 import { SCRIPTS } from '../ai/scripts.ts';
 import type { AiLevel } from '../ai/types.ts';
+import type { Deploy } from '../sim/types.ts';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
 
@@ -49,8 +50,12 @@ export class Hud {
     this.buildMenu();
     this.panel.addEventListener('click', (e) => {
       const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
+      if (act === 'recall') return game.recall();
+      if (act === 'send-left') return game.send(-1);
+      if (act === 'send-right') return game.send(1);
       const s = game.selected;
       if (!act || !s) return;
+      if (act.startsWith('deploy:')) game.setDeploy(s, act.slice(7) as Deploy);
       if (act === 'collect') game.collect(s);
       if (act === 'remove') game.demolishOrCancel(s);
       if (act.startsWith('train:')) {
@@ -102,9 +107,22 @@ export class Hud {
       });
       render();
     };
+    const modes: { id: GameMode; name: string; blurb: string }[] = [
+      { id: 'skirmish', name: 'Skirmish', blurb: 'Two towers, one lane. Destroy the enemy Core.' },
+      { id: 'expedition', name: 'Expedition (new)', blurb: 'One tower in fogged country. Send squads out to explore and find caches.' },
+    ];
+    const syncMode = () => {
+      const exp = this.choice.mode === 'expedition';
+      $('#skirmish-opts').classList.toggle('hidden', exp);
+      $('#level-wrap').classList.toggle('off', this.choice.opponent === 'dummy');
+    };
+    group('#modes', modes, () => this.choice.mode, (id) => {
+      this.choice.mode = id;
+      syncMode();
+    });
     group('#opponents', opponents, () => this.choice.opponent, (id) => (this.choice.opponent = id));
     group('#levels', levels, () => this.choice.level, (id) => (this.choice.level = id));
-    $('#level-wrap').classList.toggle('off', this.choice.opponent === 'dummy');
+    syncMode();
     $('#start').addEventListener('click', () => {
       saveChoice(this.choice);
       this.menu.classList.remove('open');
@@ -182,6 +200,10 @@ export class Hud {
     for (const u of g.world.units) if (u.team === g.team) counts.set(u.def, (counts.get(u.def) ?? 0) + 1);
     const army = [...counts].map(([id, n]) => `${n} ${UNITS[id as UnitId].name}${n > 1 ? 's' : ''}`).join(', ') || 'none';
     const has = (def: string) => t.rooms.some((r) => r.def === def);
+    const exp = !!g.world.map;
+    const out = g.world.units.filter((u) => u.team === g.team && u.order === 'march').length;
+    const home = g.world.units.filter((u) => u.team === g.team && u.order === 'garrison').length;
+    const explored = g.world.map ? g.world.map.explored.filter(Boolean).length : 0;
     const hint = !has('mine')
       ? 'Build Mines, then tap them to collect.'
       : !has('barracks') && !has('hangar')
@@ -190,7 +212,9 @@ export class Hud {
           ? `${ready === 1 ? 'A producer is' : `${ready} producers are`} filling up: tap to collect.`
           : t.rooms.some((r) => ROOMS[r.def].trains && r.built && !r.job && r.train) && used >= max - 1
             ? 'Supply is full: build Quarters.'
-            : 'Tap a room for details.';
+            : exp && out === 0 && home > 0
+              ? 'Send the garrison out, or set a Barracks to Deploy Left/Right, to explore.'
+              : 'Tap a room for details.';
     const rate = (n: number) => n.toFixed(1);
     const html = `
       <div class="info">
@@ -200,15 +224,29 @@ export class Hud {
       </div>
       <div class="ctrl">
         <p><i class="s">☗</i> Supply ${used} / ${max}</p>
-        <p>Army: ${army}</p>
+        <p>Army: ${army}${exp ? ` <span class="dim">(${home} home, ${out} out)</span>` : ''}</p>
+        ${exp ? `<p>Explored: ${explored} / ${g.world.map!.sites.length} sectors</p>` : ''}
         <p class="hint">${hint}</p>
       </div>`;
-    if (this.panelKey !== 'summary') {
-      this.panelKey = 'summary';
-      this.panel.innerHTML = '<div class="summary"></div>';
+    // Buttons are built once per layout and only enabled/disabled after that (never rebuilt on a timer).
+    const key = exp ? 'summary:exp' : 'summary';
+    if (this.panelKey !== key) {
+      this.panelKey = key;
+      this.panel.innerHTML = `<div class="summary"><div class="sum-text"></div>${
+        exp
+          ? `<div class="acts orders">
+              <button data-act="send-left" title="March every unit at home to the left">◀ Send</button>
+              <button data-act="recall" title="Every unit comes home">Recall</button>
+              <button data-act="send-right" title="March every unit at home to the right">Send ▶</button>
+            </div>`
+          : ''
+      }</div>`;
     }
-    const el = this.panel.querySelector('.summary')!;
+    const el = this.panel.querySelector('.sum-text')!;
     if (el.innerHTML !== html) el.innerHTML = html;
+    for (const b of this.panel.querySelectorAll<HTMLButtonElement>('.orders button')) {
+      b.disabled = b.dataset.act === 'recall' ? out === 0 : home === 0;
+    }
   }
 
   private updatePanel(): void {
@@ -236,6 +274,7 @@ export class Hud {
       lines.push(`HP ${Math.ceil(r.hp)} / ${d.hp} · +${ECON.coreRate.minerals} minerals/s`);
     }
     let trainHtml = '';
+    let deployHtml = '';
     if (r.built && d.trains) {
       if (r.job) {
         const u = UNITS[r.job.unit];
@@ -252,6 +291,11 @@ export class Hud {
           return `<button data-act="train:${id}" class="${r.train === id ? 'on' : ''}" title="${u.blurb}">${u.name}<span class="cost">${costHtml(u.cost)}</span><span class="cost">${u.supply} supply</span></button>`;
         })
         .join('')}<button data-act="train:off" class="${r.train ? '' : 'on'}">Pause</button></div>`;
+      if (g.tower.front === 'both') {
+        const dep = r.deploy ?? defaultDeploy(g.tower);
+        const opt = (id: Deploy, label: string) => `<button data-act="deploy:${id}" class="${dep === id ? 'on' : ''}">${label}</button>`;
+        deployHtml = `<p class="sub">Deploy new units</p><div class="acts deploy">${opt('left', '◀ Left')}${opt('home', 'Home')}${opt('right', 'Right ▶')}</div>`;
+      }
     }
     if (r.built && r.hp < d.hp && d.hp > 0) lines.push(`Damaged: ${Math.ceil(r.hp)} / ${d.hp} HP`);
     const removeErr = removalError(g.tower, r);
@@ -262,7 +306,7 @@ export class Hud {
     // Only rebuild the panel's buttons when its structure changes. Rebuilding on every progress tick
     // replaced a button between mousedown and mouseup, which swallowed clicks.
     const linesHtml = lines.map((l) => `<p>${l}</p>`).join('');
-    const key = JSON.stringify([r.id, r.built, removeErr, canCollect, group.length, r.train]);
+    const key = JSON.stringify([r.id, r.built, removeErr, canCollect, group.length, r.train, r.deploy]);
     if (key === this.panelKey) {
       this.setLines(linesHtml);
       return;
@@ -281,6 +325,7 @@ export class Hud {
         <div class="head" style="--room:${d.color}"><b>${d.name}</b></div>
         <p class="blurb">${d.blurb}</p>
         <div class="lines"></div>
+        ${deployHtml}
         ${removeErr && r.def !== 'core' && r.def !== 'rubble' ? `<p class="why">${removeErr}</p>` : ''}
       </div>
       <div class="ctrl">${trainHtml}${actsHtml}</div>`;
@@ -298,7 +343,8 @@ const CHOICE_KEY = 'tower-rts.match';
 function loadChoice(): MatchConfig {
   try {
     const c = JSON.parse(localStorage.getItem(CHOICE_KEY) ?? 'null');
-    if (c && (c.opponent === 'dummy' || SCRIPTS[c.opponent]) && ['relaxed', 'steady', 'sharp'].includes(c.level)) return c;
+    if (c && (c.opponent === 'dummy' || SCRIPTS[c.opponent]) && ['relaxed', 'steady', 'sharp'].includes(c.level))
+      return { ...c, mode: c.mode === 'expedition' ? 'expedition' : 'skirmish' };
   } catch {
     // storage unavailable: fall through to the default
   }

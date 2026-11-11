@@ -1,5 +1,8 @@
 /** Canvas 2D side-view renderer: sky, ground, every tower on the axis, units, shots. Never mutates the sim. */
-import { MERGE_MULT, ROOMS, TOWER, UNITS } from '../sim/defs.ts';
+import { MAP, MERGE_MULT, ROOMS, TOWER, UNITS, type SiteKind } from '../sim/defs.ts';
+import { mapSpan, sectorCenter, sectorOf } from '../sim/map.ts';
+import { visibleSectors } from '../sim/systems/explore.ts';
+import type { WorldMap } from '../sim/types.ts';
 import { bufferCap, canAfford, buildCost, mergeGroups, placementError, roomAt, roomRate } from '../sim/tower.ts';
 import type { Room, Tower, Unit } from '../sim/types.ts';
 import { DT } from '../sim/world.ts';
@@ -28,11 +31,29 @@ const TOWER_ROOF = ['#4b516e', '#5e4a5a', '#5e5944'] as const;
 /** Effects live this many ticks (matches the sim's TTL). */
 const FX_TICKS = 12;
 
+/** Icon and colour for a discovered site, on the map and on the sector strip. */
+const SITE_ICON: Record<SiteKind, { icon: string; color: string; label: string }> = {
+  home: { icon: '⌂', color: '#4cc3ff', label: 'Home' },
+  empty: { icon: '·', color: '#8a8fa8', label: '' },
+  cache: { icon: '▣', color: '#ffc857', label: 'Cache' },
+  ruin: { icon: '⌇', color: '#9a8f86', label: 'Ruins' },
+  camp: { icon: '⛺', color: '#ff7a7a', label: 'Raider camp' },
+  stronghold: { icon: '⚑', color: '#ff4d4d', label: 'Stronghold' },
+  trader: { icon: '⚖', color: '#e8c56a', label: 'Trader' },
+};
+
+/** Screen rect of the sector strip, for tap handling (set each frame by the renderer). */
+export type StripHit = { x: number; y: number; w: number; h: number; s0: number; s1: number };
+
 export class Renderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly cam: Camera;
   private readonly ctx: CanvasRenderingContext2D;
   private dpr = 1;
+  /** Where the sector strip was drawn last frame (null when there is no map). */
+  strip: StripHit | null = null;
+  /** Visible sectors this frame (index = sector + radius). */
+  private vis: boolean[] = [];
 
   constructor(canvas: HTMLCanvasElement, cam: Camera) {
     this.canvas = canvas;
@@ -55,15 +76,20 @@ export class Renderer {
     this.sky();
     const [ox, oy] = cam.toScreen(0, 0);
     ctx.setTransform(this.dpr * cam.zoom, 0, 0, this.dpr * cam.zoom, this.dpr * ox, this.dpr * oy);
+    this.vis = visibleSectors(game.world);
     this.ground(game);
+    if (game.world.map) this.sites(game.world.map);
     for (const t of game.world.towers) if (t) this.tower(game, t);
     this.placement(game);
     this.selection(game);
     this.units(game);
     this.effects(game);
+    if (game.world.map) this.fog(game.world.map);
     this.floaters(game);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    if (game.started) this.laneStrip(game);
+    this.strip = null;
+    if (game.started && game.world.map) this.sectorStrip(game, game.world.map);
+    else if (game.started) this.laneStrip(game);
     if (game.debug) this.debug(game);
   }
 
@@ -81,7 +107,8 @@ export class Renderer {
 
   private ground(game: Game): void {
     const { ctx } = this;
-    const field = fieldBounds(game.world.towers);
+    const span = game.world.map && mapSpan(game.world.map);
+    const field = span ? { x0: span.x0 * CELL_W, x1: span.x1 * CELL_W } : fieldBounds(game.world.towers);
     const left = field.x0 - 3000, right = field.x1 + 3000;
     ctx.fillStyle = '#2e2a3d';
     ctx.beginPath();
@@ -95,7 +122,7 @@ export class Renderer {
     ctx.fillStyle = g;
     ctx.fillRect(left, 0, right - left, 2000);
     // The road: packed dirt across the whole field (towers are drawn over it).
-    const road0 = field.x0 - 2 * CELL_W, road1 = field.x1 + 2 * CELL_W;
+    const road0 = field.x0 - (span ? 0 : 2 * CELL_W), road1 = field.x1 + (span ? 0 : 2 * CELL_W);
     ctx.fillStyle = '#7a6250';
     ctx.fillRect(road0, 0, road1 - road0, 22);
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
@@ -105,8 +132,16 @@ export class Renderer {
     ctx.setLineDash([24, 18]);
     line(ctx, road0, 11, road1, 11);
     ctx.setLineDash([]);
+    // Expedition: a post at every sector boundary, and the map's ends.
+    if (span) {
+      for (let s = -game.world.map!.radius; s <= game.world.map!.radius + 1; s++) {
+        const bx = (sectorCenter(s) - MAP.sector / 2) * CELL_W;
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fillRect(bx - 2, -26, 4, 48);
+      }
+    }
     // Midfield marker between the outermost towers.
-    if (game.world.towers.length > 1) {
+    else if (game.world.towers.length > 1) {
       ctx.fillStyle = 'rgba(255,255,255,0.12)';
       ctx.fillRect((field.x0 + field.x1) / 2 - 2, 0, 4, 22);
     }
@@ -268,10 +303,61 @@ export class Renderer {
 
   // ---- Units & effects ------------------------------------------------------------
 
+  /** Expedition: a marker at each discovered site's sector centre. */
+  private sites(m: WorldMap): void {
+    const { ctx } = this;
+    for (const site of m.sites) {
+      if (!site.discovered || site.kind === 'home' || site.kind === 'empty') continue;
+      const look = SITE_ICON[site.kind];
+      const x = sectorCenter(site.sector) * CELL_W;
+      const done = site.kind === 'cache' && site.claimed;
+      ctx.globalAlpha = done ? 0.35 : 1;
+      // A post with a sign.
+      ctx.fillStyle = '#4a3b30';
+      ctx.fillRect(x - 3, -120, 6, 120);
+      ctx.fillStyle = 'rgba(15,16,26,0.85)';
+      ctx.fillRect(x - 70, -150, 140, 40);
+      ctx.strokeStyle = look.color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 70, -150, 140, 40);
+      ctx.font = '700 18px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = look.color;
+      ctx.fillText(`${look.icon} ${done ? 'Looted' : look.label}`, x, -130, 130);
+      if (site.kind === 'cache' && !done) {
+        ctx.fillStyle = '#8a6a2e';
+        ctx.fillRect(x - 22, -26, 44, 26);
+        ctx.fillStyle = '#ffc857';
+        ctx.fillRect(x - 22, -16, 44, 4);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /** Expedition fog: unexplored sectors under a dark curtain; explored but unseen sectors dimmed. */
+  private fog(m: WorldMap): void {
+    const { ctx } = this;
+    for (let s = -m.radius; s <= m.radius; s++) {
+      const i = s + m.radius;
+      if (this.vis[i]) continue;
+      const x0 = (sectorCenter(s) - MAP.sector / 2) * CELL_W;
+      ctx.fillStyle = m.explored[i] ? 'rgba(8,9,18,0.35)' : 'rgba(8,9,18,0.9)';
+      ctx.fillRect(x0, -4000, MAP.sector * CELL_W, 6000);
+    }
+  }
+
+  private seen(game: Game, u: Unit): boolean {
+    const m = game.world.map;
+    if (!m || u.team === game.team) return true;
+    const s = sectorOf(u.x);
+    return !!this.vis[s + m.radius];
+  }
+
   private units(game: Game): void {
     const a = game.alpha;
-    // Ground units back-to-front by depth so nearer ones overlap farther ones.
-    const list = [...game.world.units].sort((u, v) => Number(u.alt > 0) - Number(v.alt > 0) || u.depth - v.depth);
+    // Ground units back-to-front by depth so nearer ones overlap farther ones. Hidden hostiles are skipped.
+    const list = game.world.units.filter((u) => this.seen(game, u)).sort((u, v) => Number(u.alt > 0) - Number(v.alt > 0) || u.depth - v.depth);
     // Spread each unit back from its sim position by its depth, so units at the same x read as a squad.
     for (const u of list) {
       const spread = u.alt > 0 ? 0 : -u.dir * u.depth * 34;
@@ -471,6 +557,63 @@ export class Renderer {
         ctx.lineTo(ux + 3.5, y);
         ctx.fill();
       } else ctx.fillRect(ux - 2, y + (u.def === 'bruiser' ? -1 : 1), u.def === 'bruiser' ? 5 : 3, u.def === 'bruiser' ? 7 : 5);
+    }
+  }
+
+  /** Expedition: one cell per sector; fog hatched, sites as icons, your units as dots. Tap a sector to look there. */
+  private sectorStrip(game: Game, m: WorldMap): void {
+    const { ctx, cam } = this;
+    const n = m.radius * 2 + 1;
+    const availW = cam.width - cam.insets.left - cam.insets.right;
+    const w = Math.min(520, availW - 24);
+    const cw = w / n;
+    const h = 30;
+    const x0 = cam.insets.left + (availW - w) / 2;
+    const y0 = cam.height - cam.insets.bottom - h - 8;
+    this.strip = { x: x0, y: y0, w, h, s0: -m.radius, s1: m.radius };
+    ctx.fillStyle = 'rgba(10,12,20,0.8)';
+    ctx.fillRect(x0 - 4, y0 - 4, w + 8, h + 8);
+    // Which sector the camera is looking at.
+    const [cx] = cam.toWorld(cam.insets.left + availW / 2, 0);
+    const lookAt = sectorOf(cx / CELL_W);
+    for (let s = -m.radius; s <= m.radius; s++) {
+      const i = s + m.radius;
+      const x = x0 + i * cw;
+      const site = m.sites[i];
+      ctx.fillStyle = !m.explored[i] ? '#14151f' : this.vis[i] ? '#2c3150' : '#20233a';
+      ctx.fillRect(x + 1, y0, cw - 2, h);
+      if (!m.explored[i]) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x + 1, y0, cw - 2, h);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 2;
+        for (let k = -h; k < cw; k += 7) line(ctx, x + k, y0 + h, x + k + h, y0);
+        ctx.restore();
+      }
+      if (site.discovered && site.kind !== 'empty') {
+        const look = SITE_ICON[site.kind];
+        ctx.globalAlpha = site.kind === 'cache' && site.claimed ? 0.35 : 1;
+        ctx.fillStyle = look.color;
+        ctx.font = `700 ${Math.min(16, cw * 0.55)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(look.icon, x + cw / 2, y0 + h / 2 - 3);
+        ctx.globalAlpha = 1;
+      }
+      if (s === lookAt) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + 1.5, y0 + 0.5, cw - 3, h - 1);
+      }
+    }
+    // Units: yours always, hostiles only where you can see.
+    for (const u of game.world.units) {
+      if (!this.seen(game, u)) continue;
+      const fx = (u.x - (sectorCenter(-m.radius) - MAP.sector / 2)) / (MAP.sector * n);
+      ctx.fillStyle = TEAM_COLOR[u.team];
+      ctx.fillRect(x0 + fx * w - 1.5, y0 + h - 7 - (u.alt > 0 ? 5 : 0), 3, 4);
     }
   }
 

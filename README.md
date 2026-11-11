@@ -3,8 +3,9 @@
 Fallout Shelter tower building meets StarCraft macro. Two towers face each other across one lane.
 You build rooms; units train on their own and march on the enemy. Your weapon is the shape of your tower.
 
-**Status: M3, full matches against an AI.** Pick an opponent (Rusher, Expander, or a practice dummy) and a difficulty,
-build your tower, and destroy the enemy Core before yours falls. Overtime at 5:00 ends every match by 7:30.
+**Status: P2 of the Expedition pivot.** Two modes. **Skirmish**: two towers, one lane, an AI opponent (M3).
+**Expedition (new)**: one tower in fogged country; set a Barracks to Deploy Left/Right (or Send the garrison) to explore
+sectors, find sites and loot caches. Raids and the enemy Stronghold arrive in P3–P4.
 See [`.plan`](.plan) for the roadmap (next: the Expedition pivot, designed in [`docs/expedition.md`](docs/expedition.md)) and [`DESIGN.md`](DESIGN.md) for the rules as built.
 
 **Play:** https://jonomf.github.io/tower-rts/ (deployed by GitHub Actions on every push to `main`)

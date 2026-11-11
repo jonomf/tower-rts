@@ -11,6 +11,8 @@ export class Camera {
   width = 1;
   height = 1;
   insets: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  /** Extra screen pixels kept clear at the bottom when fitting (room for the strip overlay). */
+  fitReserveBottom = 0;
   minZoom = 0.2;
   maxZoom = 3;
 
@@ -32,10 +34,11 @@ export class Camera {
   /** Fit a world rect into the area inside the insets. */
   fit(r: Rect): void {
     const aw = Math.max(1, this.width - this.insets.left - this.insets.right);
-    const ah = Math.max(1, this.height - this.insets.top - this.insets.bottom);
+    const ah = Math.max(1, this.height - this.insets.top - this.insets.bottom - this.fitReserveBottom);
     this.zoom = clamp(Math.min(aw / r.w, ah / r.h), this.minZoom, this.maxZoom);
     this.x = r.x + r.w / 2;
-    this.y = r.y + r.h / 2;
+    // Centre the rect in the area above the reserve.
+    this.y = r.y + r.h / 2 + this.fitReserveBottom / 2 / this.zoom;
   }
 
   panBy(dsx: number, dsy: number): void {
