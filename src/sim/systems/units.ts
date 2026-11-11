@@ -32,7 +32,10 @@ export function frontRoom(t: Tower, reachesAllFloors: boolean): Room | undefined
 }
 
 export function unitSystem(w: World, dt: number): void {
+  // Everyone decides from the same snapshot (start-of-tick positions), and unit damage lands after
+  // all have acted, so neither side gets the first shot from update order.
   for (const u of w.units) u.px = u.x;
+  const hits: [Unit, number][] = [];
   for (const u of w.units) {
     if (u.hp <= 0) continue;
     const d = UNITS[u.def];
@@ -44,7 +47,7 @@ export function unitSystem(w: World, dt: number): void {
     let bestDist = Infinity;
     for (const v of w.units) {
       if (v.team === u.team || v.hp <= 0 || !canHit(u, v)) continue;
-      const dist = Math.abs(v.x - u.x);
+      const dist = Math.abs(v.px - u.px);
       if (dist <= reach && dist < bestDist) {
         best = v;
         bestDist = dist;
@@ -53,7 +56,7 @@ export function unitSystem(w: World, dt: number): void {
     if (best) {
       u.target = { kind: 'unit', id: best.id };
       if (u.cooldown <= 0) {
-        best.hp -= d.attack.damage;
+        hits.push([best, d.attack.damage]);
         u.cooldown = d.attack.cooldown;
         w.effects.push({ kind: 'shot', tick: w.tick, team: u.team, fx: u.x, falt: u.alt, tx: best.x, talt: best.alt, room: null });
       }
@@ -63,7 +66,7 @@ export function unitSystem(w: World, dt: number): void {
     // 2. At the enemy tower face: hit its frontmost reachable room.
     const enemy: Team = u.team === 0 ? 1 : 0;
     const enemyTower = w.towers[enemy];
-    const distFace = Math.abs(faceX(enemy) - u.x);
+    const distFace = Math.abs(faceX(enemy) - u.px);
     if (enemyTower && distFace <= reach && d.attack.hitsGround) {
       const room = frontRoom(enemyTower, d.air);
       if (room) {
@@ -94,7 +97,8 @@ export function unitSystem(w: World, dt: number): void {
     if ((dir > 0 && u.x > stop) || (dir < 0 && u.x < stop)) u.x = stop;
   }
 
-  // Remove the dead (after everyone has acted, so order within a tick is fair and deterministic).
+  for (const [target, damage] of hits) target.hp -= damage;
+  // Remove the dead.
   for (const u of w.units) if (u.hp <= 0) w.effects.push({ kind: 'died', tick: w.tick, x: u.x, alt: u.alt, team: u.team });
   w.units = w.units.filter((u) => u.hp > 0);
 }

@@ -10,7 +10,7 @@ Units train on their own and march on the enemy. Your only weapon is the shape o
 3. Production rooms train their selected unit on repeat while you have the supply and the bank to pay.
 4. Waves clash in the lane. Survivors chew into the enemy tower face, room by room.
 5. Watch the enemy composition, then swap production, add defenses, and research counters.
-Win: destroy the enemy Core. (Optional sudden death at 10 min: towers take +50% damage.)
+Win: destroy the enemy Core. Overtime: from 5:00 both Cores burn 10 hp/s, so a match ends by 7:30; if both fall on the same tick, the tower with more room hp left wins.
 
 ## Tower
 - Grid 6 wide × 8 high. Column 5 faces the lane (mirrored for the enemy).
@@ -60,6 +60,13 @@ Production rooms train their picked unit on repeat; each job is paid when it sta
 
 Intended counters: Bruiser > Trooper swarm · Trooper/Flak/Interceptor > Flyer · Flyer > Bruiser and Walker · Gun Nest > ground waves · Walker > turrets and walls.
 
+## Production order
+Rooms are served oldest first. A room that can't afford its unit holds that price back from the rooms after it
+(only for resources the later unit needs), so cheap units can't starve an expensive one.
+
 ## AI scripts (data)
-Ordered build steps (`build Mine at any`, `build Barracks lane-side`, `set Barracks → Trooper`) plus standing rules (`if enemy air ≥ 3 → build Flak`).
-It's the same shape the player-automation tie-in will use later.
+`src/ai/scripts.ts`. A script is an ordered list of steps: `{ build, at, train? }` or `{ train: seconds }`, where
+`at` is `front` (lane-side column), `back`, `merge` (next to a same-type room) or `up` (highest floor).
+By default the AI stops training to save for the next build (`saves: false` turns that off). After the order, standing
+rules fire when they hold and are affordable (`supplyCapped`, `bankOver`), and `rebuild` restores destroyed rooms.
+Levels: Relaxed never taps (40% producer income); Sharp taps every 3 s. It's the same shape the player-automation tie-in will use later.

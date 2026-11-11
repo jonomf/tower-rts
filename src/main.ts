@@ -66,8 +66,6 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'f' || e.key === 'F') cycleView();
 });
 onResize();
-const touchPortrait = matchMedia('(pointer: coarse) and (orientation: portrait)').matches;
-game.notify(touchPortrait ? 'Tip: turn your phone sideways' : 'Build Mines, then a Barracks. Units march on their own.');
 
 let last = performance.now();
 function loop(now: number): void {

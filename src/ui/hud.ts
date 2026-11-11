@@ -1,7 +1,9 @@
 /** DOM HUD: top bar, build palette, selected-room panel, toasts, help. Rebuilt cheaply each frame via text diffing. */
 import { ECON, MERGE_MULT, PALETTE, ROOMS, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
 import { bufferCap, canAfford, coreOf, groupOf, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
-import type { Game } from '../game.ts';
+import { DEFAULT_MATCH, type Game, type MatchConfig } from '../game.ts';
+import { SCRIPTS } from '../ai/scripts.ts';
+import type { AiLevel } from '../ai/types.ts';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
 
@@ -42,8 +44,9 @@ export class Hud {
     $('#help-close').addEventListener('click', () => this.help.classList.remove('open'));
     $('#new-game').addEventListener('click', () => {
       this.help.classList.remove('open');
-      game.newGame();
+      this.openMenu();
     });
+    this.buildMenu();
     this.panel.addEventListener('click', (e) => {
       const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
       const s = game.selected;
@@ -57,7 +60,56 @@ export class Hud {
       }
       this.panelKey = '';
     });
-    $('#again').addEventListener('click', () => game.newGame());
+    $('#again').addEventListener('click', () => game.start());
+    $('#to-menu').addEventListener('click', () => {
+      this.gameover.classList.remove('open');
+      this.openMenu();
+    });
+  }
+
+  // ---- Start menu -------------------------------------------------------------
+
+  private readonly menu = $('#menu');
+  private choice: MatchConfig = loadChoice();
+
+  private openMenu(): void {
+    this.game.started = false;
+    this.menu.classList.add('open');
+  }
+
+  private buildMenu(): void {
+    const opponents = [
+      ...Object.values(SCRIPTS).map((sc) => ({ id: sc.id, name: sc.name, blurb: sc.blurb })),
+      { id: 'dummy', name: 'Target dummy', blurb: 'A tower that never fights back. For practice.' },
+    ];
+    const levels: { id: AiLevel; name: string; blurb: string }[] = [
+      { id: 'relaxed', name: 'Relaxed', blurb: 'The AI never taps to collect, so its economy runs at 40%.' },
+      { id: 'sharp', name: 'Sharp', blurb: 'The AI collects everything. You’ll need to tap too.' },
+    ];
+    const group = <T extends string>(sel: string, items: { id: T; name: string; blurb: string }[], get: () => T, set: (id: T) => void) => {
+      const el = $(sel);
+      const render = () => {
+        el.innerHTML = items
+          .map((o) => `<button data-id="${o.id}" class="${get() === o.id ? 'on' : ''}"><b>${o.name}</b><span>${o.blurb}</span></button>`)
+          .join('');
+      };
+      el.addEventListener('click', (e) => {
+        const id = (e.target as HTMLElement).closest<HTMLElement>('[data-id]')?.dataset.id as T | undefined;
+        if (!id) return;
+        set(id);
+        render();
+        $('#level-wrap').classList.toggle('off', this.choice.opponent === 'dummy');
+      });
+      render();
+    };
+    group('#opponents', opponents, () => this.choice.opponent, (id) => (this.choice.opponent = id));
+    group('#levels', levels, () => this.choice.level, (id) => (this.choice.level = id));
+    $('#level-wrap').classList.toggle('off', this.choice.opponent === 'dummy');
+    $('#start').addEventListener('click', () => {
+      saveChoice(this.choice);
+      this.menu.classList.remove('open');
+      this.game.start(this.choice);
+    });
   }
 
   update(): void {
@@ -68,6 +120,7 @@ export class Hud {
     set(this.supply, `${g.world.supplyUsed(g.team)}/${supplyMax(t)}`);
     const s = Math.floor(g.world.seconds);
     set(this.clock, `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
+    this.clock.classList.toggle('overtime', g.world.inOvertime);
     set(this.pauseBtn, g.paused ? '▶' : '❚❚');
     this.pauseBtn.classList.toggle('on', g.paused);
     set(this.speedBtn, `${g.speed}×`);
@@ -99,7 +152,7 @@ export class Hud {
     const s = Math.floor(w.seconds);
     const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const won = w.winner === this.game.team;
-    $('#gameover-title').textContent = won ? 'Enemy tower razed!' : 'Your Core fell';
+    $('#gameover-title').textContent = won ? 'Victory! Enemy Core destroyed' : 'Defeat: your Core fell';
     $('#gameover-detail').textContent = won
       ? `Took ${time}. Core HP left: ${Math.ceil(coreOf(this.game.tower)?.hp ?? 0)}.`
       : `You held out for ${time}.`;
@@ -171,6 +224,26 @@ export class Hud {
       </div>
       ${removeErr && r.def !== 'core' && r.def !== 'rubble' ? `<p class="why">${removeErr}</p>` : ''}`;
     this.panel.classList.add('open');
+  }
+}
+
+const CHOICE_KEY = 'tower-rts.match';
+
+function loadChoice(): MatchConfig {
+  try {
+    const c = JSON.parse(localStorage.getItem(CHOICE_KEY) ?? 'null');
+    if (c && (c.opponent === 'dummy' || SCRIPTS[c.opponent]) && (c.level === 'relaxed' || c.level === 'sharp')) return c;
+  } catch {
+    // storage unavailable: fall through to the default
+  }
+  return { ...DEFAULT_MATCH };
+}
+
+function saveChoice(c: MatchConfig): void {
+  try {
+    localStorage.setItem(CHOICE_KEY, JSON.stringify(c));
+  } catch {
+    // not fatal
   }
 }
 

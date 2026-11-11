@@ -162,6 +162,7 @@ export const ECON = {
   rubbleRebuild: 0.5,
 };
 
+
 /** Total output multiplier for a merged group of n rooms (index = n). */
 export const MERGE_MULT = [0, 1, 2.2, 3.6];
 export const MAX_MERGE = 3;
@@ -241,4 +242,11 @@ export const LANE = {
   groundReach: 2,
   /** Units count as touching when this close (cells), on top of attack range. */
   contact: 0.25,
+};
+
+/** Overtime breaks stalemates: from `start` seconds on, both Cores burn. Whoever hurt the other more outlasts them. */
+export const OVERTIME = {
+  start: 300,
+  /** Core hp lost per second. */
+  burn: 10,
 };

@@ -3,8 +3,9 @@
 Fallout Shelter tower building meets StarCraft macro. Two towers face each other across one lane.
 You build rooms; units train on their own and march on the enemy. Your weapon is the shape of your tower.
 
-**Status: M2, units and the lane.** Build an economy, then Barracks and Hangars that train units on repeat.
-Units march down the lane and raze a static dummy tower. A real AI opponent arrives in M3. See [`.plan`](.plan) for the roadmap and [`DESIGN.md`](DESIGN.md) for the rules and numbers.
+**Status: M3, full matches against an AI.** Pick an opponent (Rusher, Expander, or a practice dummy) and a difficulty,
+build your tower, and destroy the enemy Core before yours falls. Overtime at 5:00 ends every match by 7:30.
+See [`.plan`](.plan) for the roadmap and [`DESIGN.md`](DESIGN.md) for the rules and numbers.
 
 **Play:** https://jonomf.github.io/tower-rts/ (deployed by GitHub Actions on every push to `main`)
 
@@ -18,7 +19,7 @@ npm run dev        # http://localhost:5173 (tsc --watch; reload to see changes)
 npm test           # simulation tests (node:test)
 npm run typecheck
 npm run build      # dist/
-npm run match      # headless runs: scripted openings, tap vs no-tap income
+npm run match -- --all   # headless AI-vs-AI win rates and match lengths
 ```
 
 ## Controls

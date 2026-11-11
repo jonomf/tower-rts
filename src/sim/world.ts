@@ -1,11 +1,11 @@
-import { ECON, TOWER, UNITS, type UnitId } from './defs.ts';
+import { ECON, OVERTIME, TOWER, UNITS, type UnitId } from './defs.ts';
 import { applyCommand } from './commands.ts';
 import { Rng, fnv1a } from './rng.ts';
 import { constructionSystem, economySystem } from './systems/economy.ts';
 import { productionSystem } from './systems/production.ts';
 import { faceX, unitSystem } from './systems/units.ts';
 import { buildScenario, type ScenarioId } from './scenario.ts';
-import { createTower, placeRoom, removeRoom } from './tower.ts';
+import { coreOf, createTower, placeRoom, removeRoom } from './tower.ts';
 import type { Command, CommandResult, Effect, Room, Team, Tower, Unit } from './types.ts';
 
 export const TICK_RATE = 20;
@@ -84,8 +84,31 @@ export class World {
     // Units act before production, so a unit never moves on the tick it is born.
     unitSystem(this, DT);
     productionSystem(this, DT);
+    this.overtime();
     this.tick++;
     if (this.effects.length) this.effects = this.effects.filter((e) => this.tick - e.tick <= EFFECT_TTL);
+  }
+
+  get inOvertime(): boolean {
+    return this.options.teams.length === 2 && this.seconds >= OVERTIME.start;
+  }
+
+  /** Both Cores burn in overtime. If both fall on the same tick, the tower in better shape wins. */
+  private overtime(): void {
+    if (!this.inOvertime || this.winner !== null) return;
+    const fallen: Team[] = [];
+    for (const t of this.towers) {
+      const core = coreOf(t);
+      if (!core) continue;
+      core.hp -= OVERTIME.burn * DT;
+      if (core.hp <= 0) fallen.push(t.team);
+    }
+    if (fallen.length === 1) this.winner = fallen[0] === 0 ? 1 : 0;
+    else if (fallen.length === 2) {
+      const score = (team: Team) =>
+        this.towers[team].rooms.reduce((s, r) => s + Math.max(0, r.hp), 0) + this.units.filter((u) => u.team === team).length;
+      this.winner = score(0) >= score(1) ? 0 : 1;
+    }
   }
 
   // ---- Units & damage -----------------------------------------------------------

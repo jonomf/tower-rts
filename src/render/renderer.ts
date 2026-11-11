@@ -1,5 +1,5 @@
 /** Canvas 2D side-view renderer: sky, ground, lane, both towers, units, shots. Never mutates the sim. */
-import { MERGE_MULT, ROOMS, TOWER, UNITS } from '../sim/defs.ts';
+import { LANE, MERGE_MULT, ROOMS, TOWER, UNITS } from '../sim/defs.ts';
 import { bufferCap, canAfford, buildCost, mergeGroups, placementError, roomAt, roomRate } from '../sim/tower.ts';
 import type { Room, Tower, Unit } from '../sim/types.ts';
 import { DT } from '../sim/world.ts';
@@ -62,6 +62,7 @@ export class Renderer {
     this.effects(game);
     this.floaters(game);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    if (game.started) this.laneStrip(game);
     if (game.debug) this.debug(game);
   }
 
@@ -432,6 +433,36 @@ export class Renderer {
       ctx.fillText(f.text, f.x, f.y - f.age * 50);
     }
     ctx.globalAlpha = 1;
+  }
+
+  /** Screen-space strip showing the whole lane, so you can watch the front while looking at your tower. */
+  private laneStrip(game: Game): void {
+    const { ctx, cam } = this;
+    const availW = cam.width - cam.insets.left - cam.insets.right;
+    const w = Math.min(420, availW - 40);
+    const x0 = cam.insets.left + (availW - w) / 2;
+    const y = cam.height - cam.insets.bottom - 22;
+    ctx.fillStyle = 'rgba(10,12,20,0.7)';
+    ctx.fillRect(x0 - 14, y - 9, w + 28, 22);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(x0, y + 5, w, 2);
+    ctx.fillRect(x0 + w / 2 - 1, y - 2, 2, 10);
+    // Tower ends.
+    ctx.fillStyle = TEAM_COLOR[0];
+    ctx.fillRect(x0 - 10, y - 5, 8, 14);
+    ctx.fillStyle = TEAM_COLOR[1];
+    ctx.fillRect(x0 + w + 2, y - 5, 8, 14);
+    for (const u of game.world.units) {
+      const ux = x0 + (u.x / LANE.length) * w;
+      ctx.fillStyle = TEAM_COLOR[u.team];
+      if (UNITS[u.def].air) {
+        ctx.beginPath();
+        ctx.moveTo(ux, y - 6);
+        ctx.lineTo(ux - 3.5, y);
+        ctx.lineTo(ux + 3.5, y);
+        ctx.fill();
+      } else ctx.fillRect(ux - 2, y + (u.def === 'bruiser' ? -1 : 1), u.def === 'bruiser' ? 5 : 3, u.def === 'bruiser' ? 7 : 5);
+    }
   }
 
   private debug(game: Game): void {

@@ -33,14 +33,29 @@
       <div class="sheet">
         <h2 id="gameover-title"></h2>
         <p id="gameover-detail"></p>
-        <div class="acts"><button id="again">Play again</button></div>
+        <div class="acts"><button id="again">Rematch</button><button id="to-menu">Change opponent</button></div>
+      </div>
+    </div>
+
+    <div id="menu" class="open">
+      <div class="sheet">
+        <h2>Tower RTS</h2>
+        <p class="lead">Build rooms. Your units march on their own. Destroy the enemy Core.</p>
+        <h3>Opponent</h3>
+        <div class="choices" id="opponents"></div>
+        <div id="level-wrap">
+          <h3>Difficulty</h3>
+          <div class="choices" id="levels"></div>
+        </div>
+        <button id="start">Start</button>
       </div>
     </div>
 
     <div id="help">
       <div class="sheet">
         <h2>Tower RTS <small>build __BUILD__</small></h2>
-        <p><b>Goal:</b> raze the enemy tower’s Core (M2: a static dummy that doesn’t fight back).</p>
+        <p><b>Goal:</b> destroy the enemy Core before yours falls. At 5:00 overtime starts and both Cores burn,
+          so whoever has hurt the other more wins.</p>
         <p>Build rooms in your tower. Producers fill up over time. <b>Tap them to collect</b>; untapped rooms only trickle in 40%.
           Rooms need a floor or a room beneath them. Same-type rooms side by side <b>merge</b> (up to 3) and produce more.</p>
         <p><b>Barracks</b> and <b>Hangars</b> train their unit on repeat while you can pay and have supply (Quarters raise it).
@@ -54,7 +69,7 @@
           <li><b>Space</b>: pause · <b>− / +</b>: speed · <b>Del</b>: demolish · <b>`</b>: debug</li>
         </ul>
         <div class="acts">
-          <button id="new-game">New game</button>
+          <button id="new-game">New match</button>
           <button id="help-close">Close</button>
         </div>
       </div>

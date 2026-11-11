@@ -8,7 +8,7 @@ Read `.plan` first. Work the next unchecked items in order, tick them in the sam
 - `npm test`: `node --test` on `tests/**/*.test.ts` (Node ≥22.18 runs .ts directly)
 - `npm run typecheck`: browser tsconfig + node tsconfig (tests, tools, sim)
 - `npm run build`: tsc → `dist/js`, copies `public/` → `dist/`
-- `npm run match -- [--n 10] [--seconds 180] [--tap 0|1]`: headless runner (M3: AI vs AI, win rates)
+- `npm run match -- [--a rush] [--b boom] [--la sharp] [--lb sharp] [--n 50] [--all]`: headless AI vs AI (win rates, lengths)
 
 Before every commit: `npm run typecheck && npm test && npm run build`. Never push red.
 
@@ -32,8 +32,9 @@ properties, and relative imports keep their `.ts` extension (tsc rewrites them t
 src/sim/        defs.ts (all numbers: rooms, units, lane), types.ts, world.ts (tick, issue, hash, replay,
                 spawnUnit, damageRoom, supplyUsed), rng.ts, commands.ts, tower.ts (grid, support, merge, supply,
                 rubble cost), scenario.ts (dummy enemy), systems/{economy,production,units}.ts
-src/ai/         (M3) script types, interpreter, scripts/*.json
-src/game.ts     client state: time control, selection, placing, floaters, toasts
+src/ai/         types.ts (script format), scripts.ts (the scripts, as data), controller.ts (AiController, pickCell,
+                stepWithAi). The controller is outside the World and acts only through world.issue()
+src/game.ts     client state: match config + AIs, tick(), time control, selection, placing, floaters, toasts
 src/render/     layout.ts (cell ↔ world), camera.ts, renderer.ts (Canvas 2D)
 src/input/      pointer + keys → game verbs / camera
 src/ui/         hud.ts (DOM)
@@ -41,7 +42,8 @@ public/         index.html, style.css, icon.svg (copied into dist/)
 tools/          build.ts, dev.ts, serve.ts, match.ts
 tests/          node:test, one file per system
 ```
-`window.game` and `window.cam` are exposed for the console and for screenshot scripts.
+`window.game` and `window.cam` are exposed for the console and for screenshot scripts. Fast-forward with `game.tick()`
+(not `world.step()`, which skips the AI).
 
 ## Port from docs/auto-rts (copy, then adapt)
 World/tick/hash/command log · combat (Attack type, air/ground flags, cooldown) · separation · camera + trackpad/pinch · Pages workflow · vite `base: './'`.

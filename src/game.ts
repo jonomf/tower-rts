@@ -7,6 +7,13 @@ import { groupOf, roomAt } from './sim/tower.ts';
 import { DT, World } from './sim/world.ts';
 import { PLAYER, type Command, type CommandResult, type Team } from './sim/types.ts';
 import { CELL_H, CELL_W, cellRect, type Cell } from './render/layout.ts';
+import { AiController } from './ai/controller.ts';
+import { SCRIPTS } from './ai/scripts.ts';
+import type { AiLevel } from './ai/types.ts';
+
+/** Who you play against: an AI script id, or the static practice dummy. */
+export type MatchConfig = { opponent: string; level: AiLevel };
+export const DEFAULT_MATCH: MatchConfig = { opponent: 'rush', level: 'relaxed' };
 
 export const SPEEDS = [0.5, 1, 2, 4];
 
@@ -27,17 +34,47 @@ export class Game {
   /** Real seconds since load, for animation. */
   time = 0;
   fps = 0;
+  /** False while the start menu is up: the world is a backdrop and doesn't tick. */
+  started = false;
+  config: MatchConfig = { ...DEFAULT_MATCH };
+  private ais: AiController[] = [];
   private acc = 0;
   private hashAt = -1;
   private hashVal = '';
+  private lastAlert = -100;
 
-  constructor(seed = Date.now() % 100000) {
-    this.world = Game.newWorld(seed);
+  constructor() {
+    this.world = new World({ seed: 1, teams: [0, 1], scenario: 'dummy' });
   }
 
-  /** M2: you vs a static dummy tower. */
-  static newWorld(seed: number): World {
-    return new World({ seed, teams: [0, 1], scenario: 'dummy' });
+  /** Start a match against `config.opponent`. */
+  start(config: MatchConfig = this.config): void {
+    this.config = { ...config };
+    const seed = Date.now() % 100000;
+    const script = SCRIPTS[config.opponent];
+    this.world = new World({ seed, teams: [0, 1], scenario: script ? 'none' : 'dummy' });
+    this.ais = script ? [new AiController(1, script, config.level, seed)] : [];
+    this.started = true;
+    this.placing = null;
+    this.selected = null;
+    this.floaters = [];
+    this.acc = 0;
+    this.lastAlert = -100;
+    this.paused = false;
+    this.notify(script ? `${script.name} is building. Mines first, then a Barracks.` : 'Practice: raze the dummy tower.');
+  }
+
+  /** One sim tick: AIs act, the world steps, alerts fire. */
+  tick(): void {
+    const w = this.world;
+    const wasOvertime = w.inOvertime;
+    for (const ai of this.ais) ai.update(w);
+    w.step();
+    if (!wasOvertime && w.inOvertime) this.notify('Overtime! Both Cores are burning.', 'error');
+    if (this.time - this.lastAlert > 10 && w.effects.some((e) => e.kind === 'shot' && e.room?.team === this.team && e.tick === w.tick - 1)) {
+      this.lastAlert = this.time;
+      this.notify('Your tower is under attack!', 'error');
+    }
   }
 
   /** 0..1 progress between the last sim tick and the next (render interpolation). */
@@ -49,26 +86,16 @@ export class Game {
     return this.world.tower(this.team);
   }
 
-  newGame(): void {
-    this.world = Game.newWorld(Date.now() % 100000);
-    this.placing = null;
-    this.selected = null;
-    this.floaters = [];
-    this.acc = 0;
-    this.paused = false;
-    this.notify('New game. Build Mines, then a Barracks.');
-  }
-
   /** Advance by real time; the sim runs on fixed ticks. */
   frame(dtReal: number): void {
     const dt = Math.min(dtReal, 0.25);
     this.time += dt;
     this.fps = this.fps * 0.9 + (dt > 0 ? 1 / dt : 0) * 0.1;
-    if (!this.paused) {
+    if (this.started && !this.paused) {
       this.acc += dt * this.speed;
       let steps = 0;
       while (this.acc >= DT && steps < 40) {
-        this.world.step();
+        this.tick();
         this.acc -= DT;
         steps++;
       }

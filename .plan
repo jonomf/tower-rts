@@ -21,7 +21,7 @@ Every milestone ends with: tests green, build green, pushed, live on GitHub Page
 - [x] D4 Generic names (Trooper, Flyer...), not Terran names. Same rule as auto-rts.
 - [x] D5 One bank per tower (the tower is the stockpile). This differs from auto-rts's per-building stock on purpose: it's one building.
 - [x] D6 Side-view cross-section, landscape: your tower on the left, the lane in the middle, enemy tower on the right. Pinch/drag camera.
-- [ ] D7 Target match length: 5–8 minutes ("one sitting").
+- [x] D7 Target match length: 5–8 minutes. Currently 2–5 min, hard cap 7:30 via overtime (revisit after the feel test).
 
 ## Open questions for Jono (Claude proceeds on the default in brackets until told otherwise)
 - Q1 Micro dial: FS-style tap-to-collect on resource rooms, with slower auto-collect when you don't tap? [yes, both, and a setting]
@@ -75,14 +75,37 @@ Every milestone ends with: tests green, build green, pushed, live on GitHub Page
       air vs ground, frontRoom rule, rubble, Core loss + freeze, determinism with combat, and the exit test below
 - Exit: you can raze a dummy tower with units you produced. Scripted 2-mine → Barracks opening (tapping): razed at 2:36
 
-## M3: full match vs AI ← FEEL-TEST GATE
-- [ ] enemy tower is a mirrored grid run by AI v0. AI = data: an ordered build order + repeat rules (the same JSON shape that player automation can use later)
-- [ ] 2 AI scripts: "rush" and "boom"
-- [ ] game flow: menu → match → win/lose → rematch; pause; 0.5×–4× speed
-- [ ] `tools/match.ts` works end to end: AI vs AI, win rate, average length, tower-razed time
-- [ ] tests: a full headless match ends with a winner under 12 min; replay from the command log reproduces the hash
-- Exit: **Jono plays a few matches on phone and desktop, then answers: engaging, or too simplified?** (the 2025-4-30 worry)
-  Levers if it's thin: tap-collect pressure, rush-room risk, crew (Q2), the hold/push lever (Q4), more direct room abilities
+## M3: full match vs AI ✅ (built; waiting on Jono's feel test)
+- [x] enemy tower run by AI v0. AI = data (`src/ai/scripts.ts`): an ordered build list with `{ train: seconds }` gaps,
+      plus standing rules (`supplyCapped`, `bankOver`), rebuild-on-rubble, and a `saves` flag. The controller lives outside
+      the World and only calls `world.issue()`, so a match replays from its command log with no AI attached
+- [x] 2 AI scripts: "Rusher" (3 Mines → 1 Barracks, never stops training) and "Expander" (same start, then pauses in
+      short bursts for a second Mine trio and more Barracks). 2 levels: Relaxed (never taps: 40% economy) and Sharp (taps)
+- [x] game flow: start menu (opponent + difficulty, remembered) → match → victory/defeat → rematch or change opponent;
+      "under attack" alert; lane strip showing every unit; overtime clock turns red
+- [x] overtime (new): from 5:00 both Cores burn 10 hp/s, so every match ends by 7:30 and whoever hurt the other more wins
+- [x] production fairness (new): rooms are served oldest first and a room waiting on resources holds its price back,
+      so Troopers can't starve a Bruiser/Flyer room forever. Unit damage is now simultaneous (no first-shot bias by team)
+- [x] `npm run match -- --all`: AI vs AI win rates and lengths
+- [x] tests (7 new, 38 total): cell picking, each script beats a passive tower, production hold-back, overtime,
+      all four pairings end with a winner under 12 min, replay-without-AI reproduces the hash, Sharp beats Relaxed
+- Exit: **Jono plays a few matches on phone and desktop, then answers below.**
+
+### What the headless matches say (40 games each, Sharp vs Sharp unless noted)
+- Expander beats Rusher 34–6 to 38–2, in about 3:50. Expander mirror: 22–18, avg 4:24. Any Sharp beats any Relaxed in ~2:10.
+- Rusher mirror: a perfect stalemate. One Trooper each dies at midfield forever and overtime decides it at 7:30.
+- There is one dominant opening: 3 merged Mines (8.2 minerals/s) pay for exactly one Barracks of nonstop Troopers (8.3/s).
+  Anything slower to its first Barracks dies around 2:10–2:30. After that the only winning move found is growing the economy in bursts.
+- Tech does not pay yet: every Bruiser- or Flyer-based script I tried lost to plain Troopers. So there is nothing to counter with,
+  which is the "too simplified" worry in concrete form. M4 (counters, defenses, hold/push) is aimed squarely at this.
+
+### Feel test (Jono fills in; M4 does not start until this is answered)
+- [ ] Played: Rusher/Relaxed, Rusher/Sharp, Expander/Sharp, on phone and desktop
+- [ ] Engaging, or too simplified? What were you actually deciding minute to minute?
+- [ ] Q6 tapping (2.5× income): fun pressure or a chore?
+- [ ] Q7 a Barracks spends everything: is pausing it to save up a good decision or an annoyance?
+- [ ] Match length (most end 2–5 min; cap 7:30) and overtime: right?
+- [ ] Which lever first for M4: counters/tech that pays, defense rooms, waves (units leave in groups), hold/push, crew (Q2)?
 
 ## M4: strategic depth (the actual game)
 - [ ] roster with counters, starting set:
@@ -116,5 +139,6 @@ Every milestone ends with: tests green, build green, pushed, live on GitHub Page
 ---
 Log
 - 2026-11-06: plan written from the obs note + Godot proto + auto-rts review
+- 2026-11-11: M3 built. AI (Rusher, Expander × Relaxed, Sharp), menu, overtime, production hold-back. 38 tests. Feel test pending
 - 2026-11-06: M2 done. Units, combat, rubble, dummy tower, game over. 31 tests. New Q7 (production vs. saving up)
 - 2026-11-06: M0 + M1 done. Zero-dep stack (D1 revised). 19 tests. Tapping vs not: ~2.5× income (Q6)

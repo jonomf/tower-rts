@@ -144,6 +144,32 @@ i.s { color: var(--s); }
 #gameover .acts { display: flex; justify-content: center; margin-top: 12px; }
 #gameover button { min-height: 44px; padding: 0 22px; font-weight: 700; }
 
+#topbar .clock.overtime { color: #ff7a7a; }
+
+/* ---- Start menu ---- */
+#menu { position: fixed; inset: 0; z-index: 6; background: rgba(8, 9, 16, 0.72); display: none; align-items: center; justify-content: center; padding: 12px; }
+#menu.open { display: flex; }
+#menu .sheet { width: min(560px, 100%); max-height: 100%; overflow: auto; background: #1b1e2e; border: 1px solid var(--ui-line); border-radius: 16px; padding: 16px 18px; }
+#menu h2 { margin: 0; }
+#menu .lead { margin: 4px 0 10px; color: var(--dim); font-size: 14px; }
+#menu h3 { margin: 10px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+#menu .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+#menu .choices button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 8px 10px; min-height: 64px; }
+#menu .choices button span { font-size: 12px; color: var(--dim); line-height: 1.3; }
+#menu .choices button.on { border-color: var(--accent); background: rgba(255, 200, 87, 0.14); }
+#menu .choices button.on b { color: var(--accent); }
+#level-wrap.off { opacity: 0.35; pointer-events: none; }
+#start { width: 100%; margin-top: 14px; min-height: 48px; font-weight: 800; font-size: 17px; background: var(--accent); color: #1b1e2e; border-color: var(--accent); }
+#start:hover { background: #ffd67e !important; }
+#gameover .acts { gap: 8px; }
+@media (orientation: landscape) and (max-height: 520px) {
+  #menu .sheet { width: min(760px, 100%); padding: 10px 14px; }
+  #menu .lead { display: none; }
+  #menu h3 { margin: 6px 0 4px; }
+  #menu .choices button { min-height: 50px; padding: 6px 8px; }
+  #start { margin-top: 8px; min-height: 42px; }
+}
+
 #help { position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.55); display: none; align-items: center; justify-content: center; padding: 16px; }
 #help.open { display: flex; }
 #help .sheet { max-width: 460px; max-height: 100%; overflow: auto; background: #1b1e2e; border: 1px solid var(--ui-line); border-radius: 16px; padding: 16px 18px; }
