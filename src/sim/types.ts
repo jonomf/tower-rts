@@ -90,7 +90,11 @@ export type Effect =
       room: { x: number; side: Side; col: number; floor: number; w: number } | null;
     }
   | { kind: 'destroyed'; tick: number; team: Team; x: number; col: number; floor: number }
-  | { kind: 'died'; tick: number; x: number; alt: number; team: Team };
+  | { kind: 'died'; tick: number; x: number; alt: number; team: Team }
+  /** Expedition: a player unit entered a sector and found its site. */
+  | { kind: 'discovered'; tick: number; sector: number; site: SiteKind }
+  /** Expedition: a cache was looted at axis position x. */
+  | { kind: 'loot'; tick: number; x: number; gained: Cost };
 
 export type Tower = {
   id: TowerId;

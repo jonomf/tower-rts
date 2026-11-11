@@ -4,6 +4,7 @@ import { Rng, fnv1a } from './rng.ts';
 import { constructionSystem, economySystem } from './systems/economy.ts';
 import { productionSystem } from './systems/production.ts';
 import { unitSystem } from './systems/units.ts';
+import { exploreSystem } from './systems/explore.ts';
 import { buildScenario, type ScenarioId } from './scenario.ts';
 import { generateMap } from './map.ts';
 import { coreOf, createTower, exitSide, faceOf, placeRoom, removeRoom, type TowerPlacement } from './tower.ts';
@@ -117,6 +118,7 @@ export class World {
     }
     // Units act before production, so a unit never moves on the tick it is born.
     unitSystem(this, DT);
+    exploreSystem(this);
     productionSystem(this, DT);
     this.overtime();
     this.tick++;
