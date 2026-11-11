@@ -10,8 +10,9 @@ const fail = (reason: string): CommandResult => ({ ok: false, reason });
 const jobRefund = (r: Room): Cost => (r.job ? { ...UNITS[r.job.unit].cost } : { minerals: 0, gas: 0 });
 
 export function applyCommand(w: World, cmd: Command): CommandResult {
-  const t = w.towers.find((x) => x.team === cmd.team);
-  if (!t) return fail('No such team');
+  const t = cmd.tower == null ? w.towers.find((x) => x.team === cmd.team) : w.towerById(cmd.tower);
+  if (!t) return fail(cmd.tower == null ? 'No such team' : 'No such tower');
+  if (t.team !== cmd.team) return fail('Not your tower');
 
   switch (cmd.type) {
     case 'build': {

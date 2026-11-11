@@ -91,11 +91,14 @@ export type Tower = {
   income: Cost;
 };
 
+/** `tower` picks one of the team's towers; omitted, the command goes to the team's first (home) tower. */
+type TowerRef = { team: Team; tower?: TowerId };
+
 export type Command =
-  | { type: 'build'; team: Team; room: RoomId; col: number; floor: number }
-  | { type: 'cancel'; team: Team; col: number; floor: number }
-  | { type: 'demolish'; team: Team; col: number; floor: number }
-  | { type: 'collect'; team: Team; col: number; floor: number }
-  | { type: 'setTrain'; team: Team; col: number; floor: number; unit: UnitId | null };
+  | (TowerRef & { type: 'build'; room: RoomId; col: number; floor: number })
+  | (TowerRef & { type: 'cancel'; col: number; floor: number })
+  | (TowerRef & { type: 'demolish'; col: number; floor: number })
+  | (TowerRef & { type: 'collect'; col: number; floor: number })
+  | (TowerRef & { type: 'setTrain'; col: number; floor: number; unit: UnitId | null });
 
 export type CommandResult = { ok: true; gained?: Cost } | { ok: false; reason: string };

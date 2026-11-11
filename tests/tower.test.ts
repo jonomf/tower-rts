@@ -103,3 +103,18 @@ test('supply: base + Quarters (built only), merged Quarters get the bonus', () =
   w.stepSeconds(ROOMS.quarters.buildTime);
   assert.equal(supplyMax(w.tower(0)), ECON.baseSupply + Math.floor(8 * 2.2));
 });
+
+test('commands go to the team\'s first tower by default, or to a named tower of that team', () => {
+  const w = new World({ teams: [0, 1] });
+  const second = w.addTower(0, { x: -20, front: 'left', coreCol: 4 });
+  for (const t of w.towers) t.bank = { minerals: 1000, gas: 0 };
+  assert.equal(w.issue({ type: 'build', team: 0, room: 'mine', col: 2, floor: 0 }).ok, true);
+  assert.equal(roomAt(w.tower(0), 2, 0)?.def, 'mine', 'default: home tower');
+  assert.equal(roomAt(second, 2, 0), undefined);
+  assert.equal(w.issue({ type: 'build', team: 0, tower: second.id, room: 'wall', col: 2, floor: 0 }).ok, true);
+  assert.equal(roomAt(second, 2, 0)?.def, 'wall');
+  const r = w.issue({ type: 'build', team: 0, tower: w.tower(1).id, room: 'wall', col: 2, floor: 0 });
+  assert.deepEqual(r, { ok: false, reason: 'Not your tower' });
+  assert.deepEqual(w.issue({ type: 'build', team: 0, tower: 9999, room: 'wall', col: 2, floor: 0 }), { ok: false, reason: 'No such tower' });
+  assert.equal(w.tower(0).x, 0, 'tower(team) is the first one created');
+});
