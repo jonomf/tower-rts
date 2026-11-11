@@ -122,5 +122,6 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-11: build emits per-build JS folders (Pages cache served old scripts with new HTML)
 - 2026-11-11: P0 permanent room panel (right column / left column / portrait strip, tower summary). Waiting on Jono for P0 exit
 - 2026-11-11: v2 plan written. P0 flicker fix and Steady level shipped. v1 plan archived to docs/plan-v1.md

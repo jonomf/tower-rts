@@ -28,6 +28,10 @@ Change numbers in the design doc and in `src/sim/defs.ts` together.
   experiment). If you add static defenses, check with `npm run match` that attackers can still win.
 - Continuous production starves expansion: 3 merged Mines pay for exactly one Barracks of Troopers. AI scripts need
   `{ train: seconds }` gaps or `saves: false`; see `src/ai/scripts.ts`.
+- GitHub Pages lets browsers cache files for 10 minutes. `npm run build` therefore emits the modules into `dist/js-<build>/`
+  so a new index.html never runs stale scripts. (Dev still uses `dist/js/`.) When checking a deploy, look at the build id
+  in the help sheet *and* that the new behaviour is there. Actions runs can also sit queued for 20+ minutes; check
+  `curl -s https://api.github.com/repos/jonomf/tower-rts/actions/runs?per_page=3` before assuming a push failed.
 - In Playwright, the game-over and menu overlays intercept clicks: check `game.world.winner` and `game.started` first.
   Fast-forward with `game.tick()`, tapping producers once a second, to play like a person.
 
@@ -35,7 +39,7 @@ Change numbers in the design doc and in `src/sim/defs.ts` together.
 - `npm run dev`: tsc --watch + static server at http://localhost:5173 (reload by hand, no HMR)
 - `npm test`: `node --test` on `tests/**/*.test.ts` (Node ≥22.18 runs .ts directly)
 - `npm run typecheck`: browser tsconfig + node tsconfig (tests, tools, sim)
-- `npm run build`: tsc → `dist/js`, copies `public/` → `dist/`
+- `npm run build`: tsc → `dist/js-<build id>/` (cache-busting), copies `public/` → `dist/`
 - `npm run match -- [--a rush] [--b boom] [--la sharp] [--lb sharp] [--n 50] [--all]`: headless AI vs AI (win rates, lengths)
 
 Before every commit: `npm run typecheck && npm test && npm run build`. Never push red.
