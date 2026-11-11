@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { World } from '../src/sim/world.ts';
 import { ECON, ROOMS, TOWER } from '../src/sim/defs.ts';
 import { coreOf, mergeGroups, roomAt, supplyMax } from '../src/sim/tower.ts';
-import type { Command, CommandResult } from '../src/sim/types.ts';
+import type { CommandResult } from '../src/sim/types.ts';
 
 const rich = () => {
   const w = new World();
@@ -12,7 +12,7 @@ const rich = () => {
 };
 const build = (w: World, room: 'mine' | 'refinery' | 'quarters' | 'wall', col: number, floor: number): CommandResult =>
   w.issue({ type: 'build', team: 0, room, col, floor });
-const cmd = (w: World, type: Exclude<Command['type'], 'build' | 'setTrain'>, col: number, floor: number) => w.issue({ type, team: 0, col, floor });
+const cmd = (w: World, type: 'cancel' | 'demolish' | 'collect', col: number, floor: number) => w.issue({ type, team: 0, col, floor });
 const reason = (r: CommandResult) => (r.ok ? 'ok' : r.reason);
 
 test('a new tower has a 2-wide Core at the back of floor 0 and the starting bank', () => {

@@ -69,7 +69,9 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
 - [ ] Fog is sim state: `explored: Set<sector>`. A sector becomes explored when a player unit enters it. Sector 0 and ±1
       terrain start explored (but ±1 sites are still discovered on entry). `visible(sector)` = holds a player unit or tower,
       or is adjacent to one. Hostile units outside visible sectors are not drawn and not shown on the strip.
-- [ ] Deploy orders: production rooms gain `deploy: 'home' | 'left' | 'right'` (command `setDeploy`, default `home`).
+- [x] Deploy orders: production rooms gain `deploy: 'home' | 'left' | 'right'` (command `setDeploy`, default `home`).
+      Default is per tower (`defaultDeploy`): home for the two-sided Expedition tower, out of the front for a
+      one-fronted Skirmish tower, so Skirmish plays as before.
       Unit orders: `garrison` (hold at the home tower; engage any hostile in sector 0, then walk back) and `march(dir)`
       (advance, fight, attack hostile sites, stop at the map edge and hold). Commands `recall` (all → garrison) and
       `sendGarrison(dir)` (all garrison units → march).
@@ -125,6 +127,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-11: P2 deploy orders (garrison / march, recall, send). Skirmish match --all identical
 - 2026-11-11: P2 map generation + Expedition world mode (home tower x=-3, front both, Core cols 2-3)
 - 2026-11-11: P1 done: commands take a tower id, neutral team + hostile(), units have dir/home, 6 new tests (44)
 - 2026-11-11: P1 coordinates: towers on one axis, world-oriented columns, frontRoom from either side. `match --all` identical to M3

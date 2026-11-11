@@ -2,7 +2,8 @@
  * Units: march along the world axis, stop to fight what they can hit, and chew into hostile tower faces.
  * The world is 1-D (x in cells). A unit walks in its own direction; team 0 starts toward +x in Skirmish.
  */
-import { LANE, TOWER, UNITS } from '../defs.ts';
+import { LANE, MAP, TOWER, UNITS } from '../defs.ts';
+import { sectorCenter } from '../map.ts';
 import { faceOf, roomAt } from '../tower.ts';
 import { hostile, type Room, type Side, type Team, type Tower, type Unit } from '../types.ts';
 import type { World } from '../world.ts';
@@ -76,7 +77,27 @@ export function unitSystem(w: World, dt: number): void {
       continue;
     }
 
-    // 2. At a hostile tower's face: hit the room nearest that face.
+    // 2. Garrison: defend the home tower's sector, otherwise go back to the tower's centre.
+    const home = u.order === 'garrison' ? w.towerById(u.home) : undefined;
+    if (home) {
+      u.target = null;
+      const homeX = home.x + TOWER.cols / 2;
+      let threat: Unit | undefined;
+      for (const v of w.units) {
+        if (!hostile(u.team, v.team) || v.hp <= 0 || !canHit(u, v) || Math.abs(v.px - homeX) > MAP.sector / 2) continue;
+        if (!threat || Math.abs(v.px - u.px) < Math.abs(threat.px - u.px)) threat = v;
+      }
+      // Walk toward the threat until it is in range (step 1 then fights it), else back to the centre.
+      const goal = threat ? threat.px - Math.sign(threat.px - u.px) * d.attack.range : homeX;
+      const delta = goal - u.x;
+      if (Math.abs(delta) > 1e-9) {
+        u.dir = delta > 0 ? 1 : -1;
+        u.x += u.dir * Math.min(Math.abs(delta), d.speed * dt);
+      }
+      continue;
+    }
+
+    // 3. At a hostile tower's face: hit the room nearest that face.
     const dir = u.dir;
     const ahead = towerAhead(w, u.team, u.px, dir, reach);
     if (ahead && Math.abs(ahead.face - u.px) <= reach && d.attack.hitsGround) {
@@ -101,12 +122,16 @@ export function unitSystem(w: World, dt: number): void {
       }
     }
 
-    // 3. March on. Never past the face of the hostile tower ahead.
+    // 4. March on. Never past the face of the hostile tower ahead, nor past the centre of the last sector.
     u.target = null;
     u.x += dir * d.speed * dt;
     if (ahead) {
       const stop = ahead.face - dir * d.attack.range;
       if ((u.x - stop) * dir > 0) u.x = stop;
+    }
+    if (w.map) {
+      const edge = sectorCenter(dir * w.map.radius);
+      if ((u.x - edge) * dir > 0) u.x = edge;
     }
   }
 

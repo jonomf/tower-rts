@@ -4,7 +4,7 @@
  * A tower sits on the world axis at [x, x + TOWER.cols); `front` says which face is its lane side.
  */
 import { ECON, MAX_MERGE, MERGE_MULT, ROOMS, TOWER, type Cost, type RoomId } from './defs.ts';
-import type { Front, Room, RoomInstId, Side, Team, Tower, TowerId } from './types.ts';
+import type { Deploy, Front, Room, RoomInstId, Side, Team, Tower, TowerId } from './types.ts';
 
 export type TowerPlacement = { x: number; front: Front; coreCol: number };
 
@@ -16,6 +16,9 @@ export function createTower(id: TowerId, team: Team, at: TowerPlacement): Tower 
 
 /** World x of a tower's face. */
 export const faceOf = (t: Tower, side: Side): number => (side === 'left' ? t.x : t.x + TOWER.cols);
+
+/** Where a production room sends units unless told otherwise: out of a one-fronted tower's front, else home. */
+export const defaultDeploy = (t: Tower): Deploy => (t.front === 'both' ? 'home' : t.front);
 
 /** The side a tower's units leave from (a two-fronted tower defaults to the right until P2's deploy orders). */
 export const exitSide = (t: Tower): Side => (t.front === 'left' ? 'left' : 'right');
@@ -83,6 +86,7 @@ export function placeRoom(t: Tower, id: RoomInstId, def: RoomId, col: number, fl
     paid: { ...d.cost },
     train: d.trains?.[0] ?? null,
     job: null,
+    deploy: null,
   };
   t.rooms.push(r);
   for (let c = col; c < col + d.width; c++) t.grid[floor][c] = id;

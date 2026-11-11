@@ -7,6 +7,7 @@ import { unitSystem } from './systems/units.ts';
 import { buildScenario, type ScenarioId } from './scenario.ts';
 import { generateMap } from './map.ts';
 import { coreOf, createTower, exitSide, faceOf, placeRoom, removeRoom, type TowerPlacement } from './tower.ts';
+import type { Deploy } from './types.ts';
 import { opponent, type Command, type CommandResult, type Effect, type Room, type Team, type Tower, type TowerId, type Unit, type WorldMap } from './types.ts';
 
 export const TICK_RATE = 20;
@@ -156,13 +157,15 @@ export class World {
   }
 
   /**
-   * A new unit leaves a tower (default: the team's home) from its exit face. Ground units exit at floor 0;
-   * air units launch from their room's floor. Units spawned for a team count against its home tower's supply.
+   * A new unit leaves a tower (default: the team's home). With a deploy of left/right it marches out of that face;
+   * with 'home' it appears at the tower's centre on garrison; with none it marches out of the tower's exit face.
+   * Ground units walk at floor 0; air units fly at their room's floor. Units spawned for a team count against
+   * that tower's supply.
    */
-  spawnUnit(def: UnitId, team: Team, floor: number, from: Tower = this.tower(team)): Unit {
+  spawnUnit(def: UnitId, team: Team, floor: number, from: Tower = this.tower(team), deploy?: Deploy): Unit {
     const d = UNITS[def];
-    const side = exitSide(from);
-    const x = faceOf(from, side);
+    const side = deploy === 'left' || deploy === 'right' ? deploy : exitSide(from);
+    const x = deploy === 'home' ? from.x + TOWER.cols / 2 : faceOf(from, side);
     const u: Unit = {
       id: this.newId(),
       def,
@@ -171,6 +174,7 @@ export class World {
       px: x,
       dir: side === 'right' ? 1 : -1,
       home: from.team === team ? from.id : null,
+      order: deploy === 'home' ? 'garrison' : 'march',
       alt: d.air ? floor + 0.5 : 0,
       depth: this.rng.next(),
       hp: d.hp,

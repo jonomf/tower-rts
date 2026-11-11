@@ -33,7 +33,15 @@ export type Room = {
   train: UnitId | null;
   /** Production rooms: the unit in progress (already paid for). */
   job: { unit: UnitId; progress: number } | null;
+  /** Production rooms: where new units go. null = the tower's default (see defaultDeploy). */
+  deploy: Deploy | null;
 };
+
+/** Where a production room sends new units: hold at the home tower, or march out of its left or right face. */
+export type Deploy = 'home' | 'left' | 'right';
+
+/** garrison: hold at the home tower and defend its sector. march: walk in `dir`, fight, hold at the map edge. */
+export type Order = 'garrison' | 'march';
 
 export type UnitInstId = number;
 
@@ -49,6 +57,7 @@ export type Unit = {
   dir: 1 | -1;
   /** The tower that trained this unit (it counts against that tower's supply), or null (raiders, test spawns). */
   home: TowerId | null;
+  order: Order;
   /** Height in floors (0 for ground units). */
   alt: number;
   /** 0..1 visual spread across the lane's depth (no gameplay effect). */
@@ -107,7 +116,12 @@ export type Command =
   | (TowerRef & { type: 'cancel'; col: number; floor: number })
   | (TowerRef & { type: 'demolish'; col: number; floor: number })
   | (TowerRef & { type: 'collect'; col: number; floor: number })
-  | (TowerRef & { type: 'setTrain'; col: number; floor: number; unit: UnitId | null });
+  | (TowerRef & { type: 'setTrain'; col: number; floor: number; unit: UnitId | null })
+  | (TowerRef & { type: 'setDeploy'; col: number; floor: number; deploy: Deploy })
+  /** Every unit of the team that has a home tower goes back to garrison it. */
+  | { type: 'recall'; team: Team }
+  /** Every garrisoned unit of the team marches out in `dir`. */
+  | { type: 'sendGarrison'; team: Team; dir: 1 | -1 };
 
 export type CommandResult = { ok: true; gained?: Cost } | { ok: false; reason: string };
 

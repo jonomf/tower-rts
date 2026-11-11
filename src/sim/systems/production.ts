@@ -1,5 +1,5 @@
 import { ROOMS, UNITS } from '../defs.ts';
-import { canAfford, supplyMax } from '../tower.ts';
+import { canAfford, defaultDeploy, supplyMax } from '../tower.ts';
 import type { World } from '../world.ts';
 
 /**
@@ -34,7 +34,7 @@ export function productionSystem(w: World, dt: number): void {
       if (r.job) {
         r.job.progress += dt;
         if (r.job.progress >= UNITS[r.job.unit].trainTime - 1e-6) {
-          w.spawnUnit(r.job.unit, t.team, r.floor, t);
+          w.spawnUnit(r.job.unit, t.team, r.floor, t, r.deploy ?? defaultDeploy(t));
           r.job = null;
         }
       }
