@@ -27,7 +27,8 @@ npm run match -- --all   # headless AI-vs-AI win rates and match lengths
 | | Touch | Mouse / keys |
 |---|---|---|
 | Build | tap a room in the palette, then a highlighted cell | click, or `1`–`6` |
-| Pick / pause a unit | tap a Barracks or Hangar → panel | same |
+| Room details | the side panel (bottom strip in portrait) shows the selected room, or a tower summary | same |
+| Pick / pause a unit | tap a Barracks or Hangar, then use the panel | same |
 | Camera preset | ⌖ (your tower → whole field → enemy) | `F` |
 | Collect / select | tap a room | click |
 | Pan / zoom | drag / pinch | drag or trackpad swipe / wheel or pinch |

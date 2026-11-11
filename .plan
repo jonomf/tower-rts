@@ -26,7 +26,8 @@ The current two-tower game stays in the menu as "Skirmish" and as a regression s
       Fixed: buttons rebuild only on structural change; text lines update separately (`setLines`).
 - [x] Middle difficulty: level **Steady** (AI taps every 90 s ≈ 70% economy), between Relaxed (40%) and Sharp (100%).
       Any opponent can be played at any level, e.g. Expander/Steady.
-- [ ] **Permanent room panel** instead of a popup. Spec:
+- [x] **Permanent room panel** instead of a popup. Built as specified; in portrait the unit buttons sit on one row and drop
+      their supply line so Collect/Demolish fit in 120 px. Spec:
       - Desktop (width ≥ 900): a fixed right-hand column, 280 px, full height under the top bar. Always visible.
       - Landscape phone (height ≤ 520): fixed left column, 210 px. The build palette stays on the right.
       - Portrait: a fixed strip above the palette, 120 px tall, content laid out in two columns.
@@ -121,4 +122,5 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-11: P0 permanent room panel (right column / left column / portrait strip, tower summary). Waiting on Jono for P0 exit
 - 2026-11-11: v2 plan written. P0 flicker fix and Steady level shipped. v1 plan archived to docs/plan-v1.md

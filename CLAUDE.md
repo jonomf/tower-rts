@@ -65,7 +65,7 @@ src/ai/         types.ts (script format), scripts.ts (the scripts, as data), con
 src/game.ts     client state: match config + AIs, tick(), time control, selection, placing, floaters, toasts
 src/render/     layout.ts (cell ↔ world), camera.ts, renderer.ts (Canvas 2D)
 src/input/      pointer + keys → game verbs / camera
-src/ui/         hud.ts (DOM)
+src/ui/         hud.ts (DOM: top bar, palette, the permanent room panel / tower summary, menu, game over)
 public/         index.html, style.css, icon.svg (copied into dist/)
 tools/          build.ts, dev.ts, serve.ts, match.ts
 tests/          node:test, one file per system

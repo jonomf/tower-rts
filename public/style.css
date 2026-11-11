@@ -79,31 +79,53 @@ i.s { color: var(--s); }
   #topbar .res { min-width: 54px; font-size: 15px; }
 }
 
-/* ---- Selected-room panel ---- */
+/* ---- Room panel: always on screen. Shows the selected room, or a tower summary. ----
+   Default (portrait / narrow): a strip above the palette, two columns.
+   Desktop: a right-hand column. Landscape phone: a left-hand column (the palette is on the right). */
 #panel {
-  position: fixed; z-index: 3; right: calc(10px + var(--safe-r)); bottom: calc(90px + var(--safe-b));
-  width: min(300px, calc(100vw - 20px)); padding: 10px 12px 12px;
-  background: var(--ui); border: 1px solid var(--ui-line); border-radius: 14px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-  display: none;
+  position: fixed; z-index: 2; left: 0; right: 0; bottom: var(--pal-h, 120px); height: 120px;
+  display: grid; grid-template-columns: 2fr 3fr; gap: 10px; align-content: start;
+  padding: 8px calc(10px + var(--safe-r)) 8px calc(10px + var(--safe-l));
+  background: var(--ui); border-top: 1px solid var(--ui-line); overflow-y: auto;
 }
-#panel.open { display: block; }
-#panel .head { display: flex; align-items: center; gap: 8px; border-left: 5px solid var(--room); padding-left: 8px; font-size: 18px; }
+#panel .summary { display: contents; }
+#panel .head { display: flex; align-items: center; gap: 8px; border-left: 5px solid var(--room); padding-left: 8px; font-size: 16px; min-height: 22px; }
 #panel .head b { flex: 1; }
-#panel .x { min-height: 30px; min-width: 30px; padding: 0; }
-#panel p { margin: 6px 0; font-size: 14px; }
-#panel .blurb { color: var(--dim); }
+#panel p { margin: 4px 0; font-size: 13px; }
+#panel .blurb { color: var(--dim); display: none; }
+#panel .hint { color: var(--accent); }
 #panel .why { color: #ff9f9f; font-size: 12px; }
-#panel .acts, #help .acts { display: flex; gap: 8px; margin-top: 10px; }
-#panel .acts button { flex: 1; min-height: 42px; }
+#panel .acts, #help .acts { display: flex; gap: 8px; margin-top: 8px; }
+#panel .ctrl .acts:first-child { margin-top: 0; }
+#panel .acts button { flex: 1; min-height: 36px; }
 #panel .cost { color: var(--dim); font-size: 13px; }
+#panel .dim { color: var(--dim); }
+/* Strip: unit buttons on one row, without the supply line, so Collect/Demolish still fit in 120 px. */
+#panel .acts.train { grid-auto-flow: column; grid-auto-columns: 1fr; }
+#panel .train button { font-size: 13px; }
+#panel .train .cost + .cost { display: none; }
+
+@media (min-width: 900px) and (min-height: 521px) {
+  #palette { right: 280px; }
+  #panel {
+    top: var(--top-h, 49px); bottom: 0; left: auto; width: 280px; height: auto;
+    display: block; padding: 14px 14px calc(14px + var(--safe-b));
+    border-top: 0; border-left: 1px solid var(--ui-line);
+  }
+  #panel .head { font-size: 18px; }
+  #panel p { font-size: 14px; margin: 6px 0; }
+  #panel .blurb { display: block; }
+  #panel .ctrl { margin-top: 10px; }
+  #panel .acts button { min-height: 42px; }
+}
 @media (orientation: landscape) and (max-height: 520px) {
-  #panel { top: calc(56px + var(--safe-t)); bottom: auto; right: calc(124px + var(--safe-r)); width: 236px; padding: 8px 10px 10px; }
-  #panel .blurb { display: none; }
-  #panel p { font-size: 13px; margin: 4px 0; }
-  #panel .head { font-size: 16px; }
-  #panel .acts button { min-height: 38px; }
-  #panel .train button { min-height: 46px; }
+  #panel {
+    top: var(--top-h, 49px); bottom: 0; right: auto; width: calc(210px + var(--safe-l)); height: auto;
+    display: block; padding: 8px 10px calc(8px + var(--safe-b)) calc(10px + var(--safe-l));
+    border-top: 0; border-right: 1px solid var(--ui-line);
+  }
+  #panel .ctrl { margin-top: 6px; }
+  #panel .acts button { min-height: 34px; }
 }
 
 /* Narrow portrait phones: keep every top-bar control on screen. */
@@ -125,13 +147,24 @@ i.s { color: var(--s); }
 }
 #toast.show { display: block; }
 #toast.error { border-color: #ff7a7a; color: #ffc4c4; }
+@media (min-width: 900px) and (min-height: 521px) {
+  #toast { left: calc((100vw - 280px) / 2); }
+}
 @media (orientation: landscape) and (max-height: 520px) {
-  #toast { top: calc(56px + var(--safe-t)); left: 30%; }
+  #toast { top: calc(56px + var(--safe-t)); left: calc(210px + (100vw - 210px - 124px) / 2); max-width: calc(100vw - 350px); }
 }
 
 /* ---- Help sheet ---- */
-#panel .acts.train { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 6px; }
-#panel .train button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 52px; padding: 4px; font-weight: 600; }
+#panel .acts.train { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 6px; }
+#panel .train button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 40px; padding: 3px; font-weight: 600; }
+@media (min-width: 900px) and (min-height: 521px), (orientation: landscape) and (max-height: 520px) {
+  #panel .acts.train { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); }
+  #panel .train button { font-size: 15px; }
+  #panel .train .cost + .cost { display: inline; }
+}
+@media (min-width: 900px) and (min-height: 521px) {
+  #panel .train button { min-height: 52px; }
+}
 #panel .train .cost { font-size: 11px; white-space: nowrap; font-weight: 400; }
 #panel .train button.on { background: rgba(255, 200, 87, 0.18); }
 

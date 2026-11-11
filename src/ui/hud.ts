@@ -1,6 +1,6 @@
 /** DOM HUD: top bar, build palette, selected-room panel, toasts, help. Rebuilt cheaply each frame via text diffing. */
 import { ECON, MERGE_MULT, PALETTE, ROOMS, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
-import { bufferCap, canAfford, coreOf, groupOf, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
+import { bufferCap, canAfford, coreOf, groupOf, mergeGroups, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
 import { DEFAULT_MATCH, type Game, type MatchConfig } from '../game.ts';
 import { SCRIPTS } from '../ai/scripts.ts';
 import type { AiLevel } from '../ai/types.ts';
@@ -53,7 +53,6 @@ export class Hud {
       if (!act || !s) return;
       if (act === 'collect') game.collect(s);
       if (act === 'remove') game.demolishOrCancel(s);
-      if (act === 'close') game.selected = null;
       if (act.startsWith('train:')) {
         const u = act.slice(6);
         game.setTrain(s, u === 'off' ? null : (u as UnitId));
@@ -161,13 +160,63 @@ export class Hud {
     this.gameover.classList.add('open');
   }
 
+  /** Nothing selected: a summary of the whole tower. */
+  private updateSummary(): void {
+    const g = this.game;
+    const t = g.tower;
+    const auto = g.world.options.autoCollectRate;
+    const full = { minerals: ECON.coreRate.minerals, gas: ECON.coreRate.gas };
+    const untapped = { ...full };
+    let ready = 0;
+    for (const grp of mergeGroups(t)) {
+      const p = ROOMS[grp[0].def].produces;
+      if (!p || !grp[0].built) continue;
+      const rate = roomRate(t, grp[0]) * grp.length;
+      full[p.res] += rate;
+      untapped[p.res] += rate * auto;
+      if (grp.reduce((a, m) => a + m.buffer, 0) >= bufferCap(roomRate(t, grp[0])) * grp.length * 0.5) ready++;
+    }
+    const used = g.world.supplyUsed(g.team);
+    const max = supplyMax(t);
+    const counts = new Map<string, number>();
+    for (const u of g.world.units) if (u.team === g.team) counts.set(u.def, (counts.get(u.def) ?? 0) + 1);
+    const army = [...counts].map(([id, n]) => `${n} ${UNITS[id as UnitId].name}${n > 1 ? 's' : ''}`).join(', ') || 'none';
+    const has = (def: string) => t.rooms.some((r) => r.def === def);
+    const hint = !has('mine')
+      ? 'Build Mines, then tap them to collect.'
+      : !has('barracks') && !has('hangar')
+        ? 'Build a Barracks to train units.'
+        : ready > 0
+          ? `${ready === 1 ? 'A producer is' : `${ready} producers are`} filling up: tap to collect.`
+          : t.rooms.some((r) => ROOMS[r.def].trains && r.built && !r.job && r.train) && used >= max - 1
+            ? 'Supply is full: build Quarters.'
+            : 'Tap a room for details.';
+    const rate = (n: number) => n.toFixed(1);
+    const html = `
+      <div class="info">
+        <div class="head" style="--room:#4b516e"><b>Your tower</b></div>
+        <p><i class="m">◆</i> ${rate(full.minerals)}/s <span class="dim">(${rate(untapped.minerals)} untapped)</span></p>
+        ${full.gas > 0 ? `<p><i class="g">▲</i> ${rate(full.gas)}/s <span class="dim">(${rate(untapped.gas)} untapped)</span></p>` : ''}
+      </div>
+      <div class="ctrl">
+        <p><i class="s">☗</i> Supply ${used} / ${max}</p>
+        <p>Army: ${army}</p>
+        <p class="hint">${hint}</p>
+      </div>`;
+    if (this.panelKey !== 'summary') {
+      this.panelKey = 'summary';
+      this.panel.innerHTML = '<div class="summary"></div>';
+    }
+    const el = this.panel.querySelector('.summary')!;
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }
+
   private updatePanel(): void {
     const g = this.game;
     const s = g.selected;
     const r = s && roomAt(g.tower, s.col, s.floor);
     if (!r) {
-      this.panel.classList.remove('open');
-      this.panelKey = '';
+      this.updateSummary();
       return;
     }
     const d = ROOMS[r.def];
@@ -220,18 +269,22 @@ export class Hud {
     }
     this.panelKey = key;
     const removeLabel = r.def === 'core' || r.def === 'rubble' ? '' : `${r.built ? 'Demolish' : 'Cancel'} <span class="cost">+${costHtml(refund)}</span>`;
-    this.panel.innerHTML = `
-      <div class="head" style="--room:${d.color}"><b>${d.name}</b><button data-act="close" class="x" aria-label="Close">✕</button></div>
-      <p class="blurb">${d.blurb}</p>
-      <div class="lines"></div>
-      ${trainHtml}
-      <div class="acts">
+    const actsHtml =
+      d.produces || removeLabel
+        ? `<div class="acts">
         ${d.produces ? `<button data-act="collect" ${canCollect ? '' : 'disabled'}>Collect</button>` : ''}
         ${removeLabel ? `<button data-act="remove" ${removeErr ? `disabled title="${removeErr}"` : ''}>${removeLabel}</button>` : ''}
+      </div>`
+        : '';
+    this.panel.innerHTML = `
+      <div class="info">
+        <div class="head" style="--room:${d.color}"><b>${d.name}</b></div>
+        <p class="blurb">${d.blurb}</p>
+        <div class="lines"></div>
+        ${removeErr && r.def !== 'core' && r.def !== 'rubble' ? `<p class="why">${removeErr}</p>` : ''}
       </div>
-      ${removeErr && r.def !== 'core' && r.def !== 'rubble' ? `<p class="why">${removeErr}</p>` : ''}`;
+      <div class="ctrl">${trainHtml}${actsHtml}</div>`;
     this.setLines(linesHtml);
-    this.panel.classList.add('open');
   }
 
   private setLines(html: string): void {
