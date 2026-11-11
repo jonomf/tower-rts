@@ -13,8 +13,8 @@ import type { AiLevel, AiScript, BuildAction, Cond, Where } from './types.ts';
 const THINK = 10;
 /** Chance to dither on a decision; gives matches variety and breaks mirror symmetry. */
 const HESITATE = 0.25;
-/** Sharp AIs tap their producers this often (ticks). */
-const TAP_EVERY = 60;
+/** Ticks between taps on its producers, by level (relaxed never taps). */
+const TAP_EVERY: Record<AiLevel, number> = { relaxed: 0, steady: 1800, sharp: 60 };
 
 type Cell = { col: number; floor: number };
 
@@ -62,7 +62,8 @@ export class AiController {
   update(w: World): void {
     if (w.winner !== null || w.tick % THINK !== 0) return;
     const t = w.towers[this.team];
-    if (this.level === 'sharp' && w.tick % TAP_EVERY === 0) {
+    const tapEvery = TAP_EVERY[this.level];
+    if (tapEvery > 0 && w.tick > 0 && w.tick % tapEvery === 0) {
       for (const r of [...t.rooms]) if (r.buffer >= 1) w.issue({ type: 'collect', team: this.team, col: r.col, floor: r.floor });
     }
     if (this.rng.next() >= HESITATE) this.decide(w, t);

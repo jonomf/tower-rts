@@ -84,6 +84,7 @@ export class Hud {
     ];
     const levels: { id: AiLevel; name: string; blurb: string }[] = [
       { id: 'relaxed', name: 'Relaxed', blurb: 'The AI never taps to collect, so its economy runs at 40%.' },
+      { id: 'steady', name: 'Steady', blurb: 'The AI collects now and then: about 70% economy.' },
       { id: 'sharp', name: 'Sharp', blurb: 'The AI collects everything. You’ll need to tap too.' },
     ];
     const group = <T extends string>(sel: string, items: { id: T; name: string; blurb: string }[], get: () => T, set: (id: T) => void) => {
@@ -209,21 +210,33 @@ export class Hud {
       ? { minerals: Math.floor(r.paid.minerals * ECON.demolishRefund), gas: Math.floor(r.paid.gas * ECON.demolishRefund) }
       : r.paid;
     const canCollect = r.built && !!d.produces && group.some((m) => m.buffer >= 1);
-    const key = JSON.stringify([r.id, lines, removeErr, canCollect, group.length, r.train]);
-    if (key === this.panelKey) return;
+    // Only rebuild the panel's buttons when its structure changes. Rebuilding on every progress tick
+    // replaced a button between mousedown and mouseup, which swallowed clicks.
+    const linesHtml = lines.map((l) => `<p>${l}</p>`).join('');
+    const key = JSON.stringify([r.id, r.built, removeErr, canCollect, group.length, r.train]);
+    if (key === this.panelKey) {
+      this.setLines(linesHtml);
+      return;
+    }
     this.panelKey = key;
     const removeLabel = r.def === 'core' || r.def === 'rubble' ? '' : `${r.built ? 'Demolish' : 'Cancel'} <span class="cost">+${costHtml(refund)}</span>`;
     this.panel.innerHTML = `
       <div class="head" style="--room:${d.color}"><b>${d.name}</b><button data-act="close" class="x" aria-label="Close">✕</button></div>
       <p class="blurb">${d.blurb}</p>
-      ${lines.map((l) => `<p>${l}</p>`).join('')}
+      <div class="lines"></div>
       ${trainHtml}
       <div class="acts">
         ${d.produces ? `<button data-act="collect" ${canCollect ? '' : 'disabled'}>Collect</button>` : ''}
         ${removeLabel ? `<button data-act="remove" ${removeErr ? `disabled title="${removeErr}"` : ''}>${removeLabel}</button>` : ''}
       </div>
       ${removeErr && r.def !== 'core' && r.def !== 'rubble' ? `<p class="why">${removeErr}</p>` : ''}`;
+    this.setLines(linesHtml);
     this.panel.classList.add('open');
+  }
+
+  private setLines(html: string): void {
+    const el = this.panel.querySelector('.lines');
+    if (el && el.innerHTML !== html) el.innerHTML = html;
   }
 }
 
@@ -232,7 +245,7 @@ const CHOICE_KEY = 'tower-rts.match';
 function loadChoice(): MatchConfig {
   try {
     const c = JSON.parse(localStorage.getItem(CHOICE_KEY) ?? 'null');
-    if (c && (c.opponent === 'dummy' || SCRIPTS[c.opponent]) && (c.level === 'relaxed' || c.level === 'sharp')) return c;
+    if (c && (c.opponent === 'dummy' || SCRIPTS[c.opponent]) && ['relaxed', 'steady', 'sharp'].includes(c.level)) return c;
   } catch {
     // storage unavailable: fall through to the default
   }

@@ -31,5 +31,8 @@ export type AiScript = {
   rebuild: boolean;
 };
 
-/** relaxed: never taps to collect (40% producer income). sharp: taps every few seconds. */
-export type AiLevel = 'relaxed' | 'sharp';
+/**
+ * How well the AI collects. relaxed: never taps (40% producer income). steady: taps every 90 s, so buffers
+ * overflow in between (about 70%). sharp: taps every 3 s (100%).
+ */
+export type AiLevel = 'relaxed' | 'steady' | 'sharp';

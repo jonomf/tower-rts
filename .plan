@@ -1,144 +1,124 @@
-# Tower RTS: development plan
+# Tower RTS: plan v2 ("Expedition" pivot)
 
-Working title "tower-rts" (rename freely; avoid "Fallout"/"Vault" in public names).
-Fallout Shelter tower building + StarCraft macro. Two towers face each other across one lane.
-You build rooms; units train automatically and march on the enemy tower. You win by adapting the tower to what the enemy fields.
-Source notes: [[Fallout Shelter + RTS game (jam) idea]], [[Auto-Starcraft]] (jono-obs).
-Prior art: docs/one-day-projects/2025-4-30 - FalloutShelter+AutoRTS (Godot MVP, reference only), docs/auto-rts (stack + sim patterns).
+Written 2026-11-11 by Claude (Fable) after Jono's M3 feel test, for other models to carry out.
+History and findings of M0–M3: `docs/plan-v1.md`. Rules as built: `DESIGN.md`. The pivot's design: `docs/expedition.md`. **Read all three, then `CLAUDE.md`, before coding.**
 
-Claude writes all the code. Milestones are scope gates, not time estimates.
-Every milestone ends with: tests green, build green, pushed, live on GitHub Pages, and a short "try this" note for Jono.
+## Where we are
+M0–M3 are live: tower building, economy, units, one lane, three AI levels, menu, overtime. 38 tests.
+Jono's verdict: fun enough to continue, but head-to-head trooper streams are too thin. New direction:
+**more Fallout Shelter, less StarCraft.** You mainly build up a tower. Now and then you get raided. You send units out
+to explore to the left and right through fog, and find caches, raider camps, a friendly tower to trade with, and an enemy tower.
+The current two-tower game stays in the menu as "Skirmish" and as a regression suite.
 
----
+## Decisions for the pivot (defaults; Jono can overturn. Proceed on these until he does)
+- E1 Map: a **1-D strip of sectors** left and right of your tower, not a 2-D grid. The game is a side view, so a strip needs
+     no second map screen and "attacks from the left or right" falls out for free. (A 2-D overworld is a later option.)
+- E2 Win: destroy the hidden enemy **Stronghold**. Lose: your Core falls. No overtime in Expedition. Target run: 10–15 min.
+- E3 Units stay automatic. Control is one setting per production room, **Deploy: Home / Left / Right**, plus a tower-wide
+     Recall. This is the hold/push lever (old Q4).
+- E4 Keep Skirmish (M3) in the menu. Expedition becomes the default mode once P3 ships.
+- E5 Friendly tower: a simple trade panel (minerals ↔ gas at a posted rate, plus one welcome gift). No diplomacy.
+- E6 Tapping stays (old Q6). Production still spends freely (old Q7); revisit at the P3 feel test.
 
-## Decisions (proposed defaults; Jono can overturn any of them)
-- [x] D1 Stack: TypeScript + Canvas 2D + GitHub Pages, **zero dependencies beyond `typescript`** (revised 2026-11-06).
-      No Vite/Vitest: Claude's workspace can't install packages, so the build is plain `tsc` (native ES modules, no bundler)
-      and tests use Node's built-in runner (`node --test`, Node ≥22.18 runs .ts directly). Claude can run, test and screenshot everything.
-      Mobile = the web page on a phone (landscape, touch-first). PWA install in M5. Native wrapper only if ever needed.
-- [x] D2 New repo (github.com/jonomf/tower-rts), not a mode inside auto-rts. Copy the proven pieces (fixed-tick World, Command pipe, defs catalog, combat, separation, camera, Pages workflow) and don't share them as a package.
-- [x] D3 Deterministic sim from day one (20 Hz fixed tick, seeded RNG, every change goes through `issue(command)`). That buys replays, headless AI-vs-AI balance runs, and lockstep multiplayer later.
-- [x] D4 Generic names (Trooper, Flyer...), not Terran names. Same rule as auto-rts.
-- [x] D5 One bank per tower (the tower is the stockpile). This differs from auto-rts's per-building stock on purpose: it's one building.
-- [x] D6 Side-view cross-section, landscape: your tower on the left, the lane in the middle, enemy tower on the right. Pinch/drag camera.
-- [x] D7 Target match length: 5–8 minutes. Currently 2–5 min, hard cap 7:30 via overtime (revisit after the feel test).
+## P0: feedback fixes (small; do first)
+- [x] Panel buttons flickered and swallowed clicks on desktop. Cause: `Hud.updatePanel` rebuilt `innerHTML` whenever any
+      text changed (training % changes every tick at speed), so a button was replaced between mousedown and mouseup.
+      Fixed: buttons rebuild only on structural change; text lines update separately (`setLines`).
+- [x] Middle difficulty: level **Steady** (AI taps every 90 s ≈ 70% economy), between Relaxed (40%) and Sharp (100%).
+      Any opponent can be played at any level, e.g. Expander/Steady.
+- [ ] **Permanent room panel** instead of a popup. Spec:
+      - Desktop (width ≥ 900): a fixed right-hand column, 280 px, full height under the top bar. Always visible.
+      - Landscape phone (height ≤ 520): fixed left column, 210 px. The build palette stays on the right.
+      - Portrait: a fixed strip above the palette, 120 px tall, content laid out in two columns.
+      - Nothing selected → show a tower summary: income per second (minerals, gas, tapped vs untapped), supply used/max,
+        units alive by type, and one hint line. A room selected → what the popup shows today. No close button; tapping
+        empty space deselects.
+      - `measureInsets()` in `src/main.ts` must subtract the panel so the camera frames the tower in the remaining area.
+      - Keep the structural-key pattern from the flicker fix. Never rebuild buttons on a timer.
+      - Verify with Playwright at the three sizes: tower fully visible, no overlap with palette, top bar or lane strip.
+- Exit: Jono confirms the panel feels right on desktop and phone.
 
-## Open questions for Jono (Claude proceeds on the default in brackets until told otherwise)
-- Q1 Micro dial: FS-style tap-to-collect on resource rooms, with slower auto-collect when you don't tap? [yes, both, and a setting]
-- Q2 Crew/dwellers assigned to rooms (the most "Fallout Shelter" mechanic)? [not in MVP; candidate for M4+ if the feel test says it's too thin]
-- Q3 Room merging: adjacent same-type rooms merge up to 3 wide for an efficiency bonus? [yes]
-- Q4 Can you aim your army (hold at home / push) or is it purely automatic? [one hold/push lever per tower, added in M4]
-- Q5 ~~Repo~~ done: github.com/jonomf/tower-rts. Jono: Settings → Pages → Source "GitHub Actions" (one-time).
-- Q7 Auto-repeat production spends every mineral as soon as it can, so a second Barracks is hard to save for unless you
-  pause the first. Options: keep (pausing is a decision), a per-room "keep a reserve" toggle, or only train when bank ≥ 2× unit cost.
-  [keep for now; revisit at the M3 feel test]
-- Q6 Tapping currently earns ~2.5× an untapped tower (`npm run match`). Is that the right size for the micro dial? [keep for now; revisit at the M3 feel test]
+## P1: generalize the world (no new gameplay; Skirmish must still pass)
+Goal: towers at arbitrary positions on one axis, attackable from both sides, more than two towers.
+- [ ] `Tower` gains `id`, `x` (left edge, world cells), `coreCol`, and `front: 'left' | 'right' | 'both'`.
+      World x is in cells; a tower spans `[x, x + TOWER.cols)`; its faces are at `x` and `x + TOWER.cols`.
+      Skirmish layout: home `x = 0` (front right), enemy `x = TOWER.cols + LANE.length` (front left, Core at cols 4–5).
+      Units' `x` shifts by `+TOWER.cols` compared with today; `faceX(team)` is replaced by tower faces.
+- [ ] `World.towers` becomes a plain list. `w.tower(team)` returns that team's first tower (so most call sites survive).
+      Commands gain an optional `tower` id (default: the team's first tower).
+- [ ] Teams: `0` player, `1` hostile, `2` neutral. Add `hostile(a, b)` (only 0↔1). Replace every "the other team" computation.
+- [ ] Units gain `dir: 1 | -1` and `home: towerId | null`. Supply counts only units whose `home` is that tower.
+- [ ] `frontRoom(tower, fromSide, reachesAllFloors)`: scan columns from the side the attacker stands on.
+      A unit attacks the nearest hostile tower face ahead of it within reach; it stops at `face − dir × range`.
+- [ ] `pickCell` in the AI mirrors `front`/`back` by `tower.front`.
+- [ ] Renderer: draw every tower at `tower.x × CELL_W` with no mirroring; `laneToWorld(x) = x × CELL_W`. Camera presets
+      cycle through known towers.
+- [ ] Tests: all 38 still pass after mechanical updates. Add: a tower hit from the left loses column 0 first; three towers
+      on one axis; `hostile()` table; a neutral tower is never targeted.
+- Exit: Skirmish plays exactly as before (`npm run match -- --all` numbers within noise of `docs/plan-v1.md`).
 
----
+## P2: sectors, fog, exploring, deploy orders
+- [ ] `src/sim/map.ts`: sectors of `SECTOR = 14` cells, indices `−R..R` (`R = 5`), home tower centred in sector 0.
+      `sectorOf(x)`. Seeded generation: each non-home sector gets one site from a weighted table (see `docs/expedition.md`),
+      with guarantees: exactly one Stronghold at distance 3–5 on a random side, exactly one Trader at distance 2–4,
+      at least one Cache within distance 2, no Camp at distance 1.
+- [ ] Fog is sim state: `explored: Set<sector>`. A sector becomes explored when a player unit enters it. Sector 0 and ±1
+      terrain start explored (but ±1 sites are still discovered on entry). `visible(sector)` = holds a player unit or tower,
+      or is adjacent to one. Hostile units outside visible sectors are not drawn and not shown on the strip.
+- [ ] Deploy orders: production rooms gain `deploy: 'home' | 'left' | 'right'` (command `setDeploy`, default `home`).
+      Unit orders: `garrison` (hold at the home tower; engage any hostile in sector 0, then walk back) and `march(dir)`
+      (advance, fight, attack hostile sites, stop at the map edge and hold). Commands `recall` (all → garrison) and
+      `sendGarrison(dir)` (all garrison units → march).
+- [ ] Sites as data. Cache: first player unit to reach it banks its loot (effect + toast). Ruin: nothing. Others in P3/P4.
+- [ ] Client: sector strip replaces the lane strip (fog shown as hatching, discovered sites as icons, tap a sector to move
+      the camera there); fog curtain drawn over unexplored sectors in the world view; Deploy buttons in the room panel;
+      Recall / Send buttons in the tower summary.
+- [ ] Menu: mode picker (Expedition / Skirmish). Expedition is marked "new" but not default yet.
+- [ ] Tests: generation guarantees over 200 seeds; exploration reveals in order; garrison returns home; a cache pays once;
+      determinism + replay with deploy commands.
+- Exit: you can explore both directions, find caches, and see the fog lift.
 
-## M0: scaffold ✅
-- [x] repo: TS strict, `npm run dev | test | build | typecheck | match`; Pages workflow (typecheck → test → build → deploy)
-- [x] `src/sim/`: World (towers, tick, seconds), seeded RNG, Command type + `issue()`, command log + `replay()`, `hash()`
-- [x] `src/render/`: canvas, camera (pan/zoom, mouse + touch + trackpad), debug overlay (tick, fps, hash; `` ` `` key / # button)
-- [x] `tools/match.ts`: headless runner (M1: scripted economy openings, tap vs no-tap)
-- [x] tests: same seed + same commands → same hash; replay reproduces it; rejected commands aren't logged
-- Exit: live page on Pages; tests green
+## P3: raids and defense ← FEEL-TEST GATE
+- [ ] `src/sim/systems/director.ts`: a deterministic raid director. First raid at 2:30, then every 60–90 s (seeded),
+      alternating/weighted by side. Size grows with time (see table in `docs/expedition.md`). Raids spawn from the nearest
+      living Camp on that side, else from the map edge. Emit a `warning` effect 12 s before; the client shows
+      "Raid from the left in 12 s" and marks the side on the strip.
+- [ ] Camps: small hostile towers from a preset layout (Core + 2–3 rooms, no production UI). Destroying one stops raids
+      from it, grants loot, and lengthens the raid interval on that side.
+- [ ] Defense rooms: **Gun Nest** (anti-ground) and **Flak** (anti-air). Must be on an outer column of their floor.
+      They shoot hostiles within range of that face. Numbers in `docs/expedition.md`.
+- [ ] Home tower for Expedition: Core in the middle (cols 2–3), `front: 'both'`.
+- [ ] Balance tool: `npm run match -- --mode expedition --bot steady --n 100` runs a scripted player
+      (an `AiController` on team 0 that also issues deploy orders) and prints: survival rate at 5/10/15 min, raids repelled,
+      sectors explored. Target before the feel test: the bot survives to 10 min in 60–80% of seeds.
+- [ ] Tests: raid schedule is deterministic per seed; warning precedes spawn; Gun Nest ignores air and Flak ignores ground;
+      a destroyed Camp stops spawning.
+- Exit: **Jono plays Expedition and answers the feel test at the bottom of this file.** Do not start P4 before that.
 
-## M1: one tower, economy only (no enemy) ✅
-- [x] tower grid: 6 columns × 8 floors. Core (2 wide) pre-built at the back of floor 0; trickles 1 mineral/s
-      (lane door dropped for now: units can just exit floor 0 in M2)
-- [x] support rule: a room needs floor 0 or a room below it (unfinished rooms count)
-- [x] build room: cost up front + build time, construction progress, cancel = full refund. Demolish = 50% refund (+ its buffer).
-      Neither may leave a room floating
-- [x] rooms: Mine (minerals), Refinery (gas), Quarters (+supply), Wall (armor, for M2)
-- [x] merge: adjacent built same-type rooms on a floor merge up to 3 wide (×2.2 / ×3.6 output; Quarters supply too)
-- [x] collect: rooms fill a buffer (30 s cap) with an FS-style bubble; tap collects the whole merged group; 40% auto-collect
-      (`autoCollectRate` world option is the micro dial)
-- [x] HUD: bank, supply, clock, pause/speed, build palette (bottom; right-hand column on landscape phones), room panel, toasts, help
-- [x] touch + mouse: tap = act, drag = pan, pinch/wheel = zoom; keys 1–4, Esc, Space, −/+, Del
-- [x] tests: production rates, merge groups + bonus, support rule, refunds, supply, buffer cap, auto-collect
-- Exit: build a working economy on a phone (verified in headless Chromium at 1366×800, 844×390 and 390×844)
+## P4: the other towers
+- [ ] Stronghold: an AI-run hostile tower (reuse `AiController` + a script). Dormant (economy only) until discovered,
+      then it sends its own units at you. Destroying its Core wins the run.
+- [ ] Trader: a neutral tower. When a player unit reaches it, a Trade panel unlocks (works from home afterwards):
+      minerals ↔ gas at a posted, slowly drifting rate, and a one-time gift. Hostiles ignore it.
+- [ ] Run summary screen: time, sectors explored, raids repelled, rooms built. Best run saved locally (try/catch around storage).
+- [ ] Make Expedition the default mode.
+- Exit: a full run can be won; a scripted bot wins 30–60% of seeds at Steady.
 
-## M2: units and the lane ✅
-- [x] production rooms: Barracks (Trooper / Bruiser), Hangar (Flyer, floor 4+). Each room keeps training its picked unit
-      on repeat (paid at start; needs bank + supply); pick or pause in the room panel; switching/pausing refunds the job.
-      (Changed from "queue of 5": with auto-repeat a queue added nothing.)
-- [x] units leave the tower (ground from floor 0, air from the Hangar's floor), march the 16-cell lane, auto-acquire targets in range
-- [x] combat: hp, range, cooldown, air/ground flags; the nearest hittable enemy in range wins; ground-only units walk under flyers.
-      No separation physics (the lane is 1-D); units fan out when drawn
-- [x] tower damage model: frontmost (lane-side) column first, then the lowest floor, among reachable floors
-      (ground: floors 1–2; air: any). Destroyed room → rubble (still supports, never targeted, rebuild at 50%). Core destroyed = loss, sim freezes
-- [x] static enemy dummy tower (17 rooms + Core, no production); ⌖ / F cycles camera: your tower → whole field → enemy
-- [x] client: mirrored enemy tower, unit sprites + hp bars, shot / death / destruction effects, room damage bars,
-      production status on rooms, game-over screen with Play again
-- [x] tests (12 new, 31 total): training + supply + refunds, Hangar floor rule, marching/stopping, unit fights,
-      air vs ground, frontRoom rule, rubble, Core loss + freeze, determinism with combat, and the exit test below
-- Exit: you can raze a dummy tower with units you produced. Scripted 2-mine → Barracks opening (tapping): razed at 2:36
+## P5: Fallout Shelter depth (pick with Jono after P3; do not start unasked)
+Candidates, roughly cheapest first: tech that pays (old M4 roster: Siege Walker, Interceptor, Lab upgrades) ·
+"rush" a room for instant output at a risk · crew assigned to rooms with stats (old Q2) · room upgrades (levels) ·
+incidents inside the tower (fire, breach) · a bigger tower that unlocks floors as you grow.
 
-## M3: full match vs AI ✅ (built; waiting on Jono's feel test)
-- [x] enemy tower run by AI v0. AI = data (`src/ai/scripts.ts`): an ordered build list with `{ train: seconds }` gaps,
-      plus standing rules (`supplyCapped`, `bankOver`), rebuild-on-rubble, and a `saves` flag. The controller lives outside
-      the World and only calls `world.issue()`, so a match replays from its command log with no AI attached
-- [x] 2 AI scripts: "Rusher" (3 Mines → 1 Barracks, never stops training) and "Expander" (same start, then pauses in
-      short bursts for a second Mine trio and more Barracks). 2 levels: Relaxed (never taps: 40% economy) and Sharp (taps)
-- [x] game flow: start menu (opponent + difficulty, remembered) → match → victory/defeat → rematch or change opponent;
-      "under attack" alert; lane strip showing every unit; overtime clock turns red
-- [x] overtime (new): from 5:00 both Cores burn 10 hp/s, so every match ends by 7:30 and whoever hurt the other more wins
-- [x] production fairness (new): rooms are served oldest first and a room waiting on resources holds its price back,
-      so Troopers can't starve a Bruiser/Flyer room forever. Unit damage is now simultaneous (no first-shot bias by team)
-- [x] `npm run match -- --all`: AI vs AI win rates and lengths
-- [x] tests (7 new, 38 total): cell picking, each script beats a passive tower, production hold-back, overtime,
-      all four pairings end with a winner under 12 min, replay-without-AI reproduces the hash, Sharp beats Relaxed
-- Exit: **Jono plays a few matches on phone and desktop, then answers below.**
+## Later
+Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player-written automation (Auto-Starcraft tie-in) · AR.
 
-### What the headless matches say (40 games each, Sharp vs Sharp unless noted)
-- Expander beats Rusher 34–6 to 38–2, in about 3:50. Expander mirror: 22–18, avg 4:24. Any Sharp beats any Relaxed in ~2:10.
-- Rusher mirror: a perfect stalemate. One Trooper each dies at midfield forever and overtime decides it at 7:30.
-- There is one dominant opening: 3 merged Mines (8.2 minerals/s) pay for exactly one Barracks of nonstop Troopers (8.3/s).
-  Anything slower to its first Barracks dies around 2:10–2:30. After that the only winning move found is growing the economy in bursts.
-- Tech does not pay yet: every Bruiser- or Flyer-based script I tried lost to plain Troopers. So there is nothing to counter with,
-  which is the "too simplified" worry in concrete form. M4 (counters, defenses, hold/push) is aimed squarely at this.
-
-### Feel test (Jono fills in; M4 does not start until this is answered)
-- [ ] Played: Rusher/Relaxed, Rusher/Sharp, Expander/Sharp, on phone and desktop
-- [ ] Engaging, or too simplified? What were you actually deciding minute to minute?
-- [ ] Q6 tapping (2.5× income): fun pressure or a chore?
-- [ ] Q7 a Barracks spends everything: is pausing it to save up a good decision or an annoyance?
-- [ ] Match length (most end 2–5 min; cap 7:30) and overtime: right?
-- [ ] Which lever first for M4: counters/tech that pays, defense rooms, waves (units leave in groups), hold/push, crew (Q2)?
-
-## M4: strategic depth (the actual game)
-- [ ] roster with counters, starting set:
-      Trooper (ground, hits G+A weakly) · Bruiser (ground, anti-armor, G only) · Siege Walker (slow, big room damage)
-      Flyer (air, hits G) · Interceptor (air, hits A only)
-- [ ] defense rooms on the lane face: Gun Nest (anti-ground), Flak (anti-air). The note's example: enemy goes air-to-ground → you build Flak/Interceptors
-- [ ] research rooms: unlock tier-2 units and +damage/+armor upgrades per branch
-- [ ] scouting info: an enemy composition readout (what's coming, what they're teching)
-- [ ] hold/push lever (Q4)
-- [ ] AI v1: reads your composition and counter-builds; 3 difficulties
-- [ ] balance via headless sweeps: every AI script vs every other, N=200 each; no strategy over 65% win rate; easy < medium < hard
-- [ ] tests: counter table holds in isolated 1v1 unit fights
-- Exit: matches with real decisions; a balance report in `docs/balance.md`
-
-## M5: mobile polish
-- [ ] touch UX pass: hit sizes, long-press info, landscape lock or responsive layout
-- [ ] PWA: manifest, offline, install
-- [ ] art pass: FS-style cross-section rooms with little animated occupants; procedural/vector, no external assets needed
-- [ ] audio + juice: hits, room destroyed, wave incoming
-- [ ] first-match onboarding (scripted easy AI plus 3 hints, no tutorial screens)
-- Exit: feels like a phone game
-
-## Later (from the note), in rough order
-- [ ] MVP+1 multiplayer: deterministic lockstep over WebRTC (+ small relay); the sim is built for this from M0
-- [ ] Jackbox mode: TV/laptop shows the battlefield; phones are each player's tower (room code join)
-- [ ] Auto-Starcraft tie-in: player-written programs drive the tower (build order + rules), same format as the AI
-- [ ] CCG budget on programs (from [[Auto-Starcraft]] 2023-1-3)
-- [ ] AR: tower as an "ant farm" on your desk (WebXR)
-- [ ] more lanes / more towers / map
+## Feel test for P3 (Jono)
+- [ ] Does "mostly building, sometimes raided, sometimes exploring" feel like the game you wanted?
+- [ ] Raid frequency and size: too much, too little?
+- [ ] Is Deploy (Home / Left / Right) enough control, too much, or too fiddly?
+- [ ] Is exploring rewarding? What did you want to find out there?
+- [ ] Which P5 candidate first?
 
 ---
 Log
-- 2026-11-06: plan written from the obs note + Godot proto + auto-rts review
-- 2026-11-11: M3 built. AI (Rusher, Expander × Relaxed, Sharp), menu, overtime, production hold-back. 38 tests. Feel test pending
-- 2026-11-06: M2 done. Units, combat, rubble, dummy tower, game over. 31 tests. New Q7 (production vs. saving up)
-- 2026-11-06: M0 + M1 done. Zero-dep stack (D1 revised). 19 tests. Tapping vs not: ~2.5× income (Q6)
+- 2026-11-11: v2 plan written. P0 flicker fix and Steady level shipped. v1 plan archived to docs/plan-v1.md

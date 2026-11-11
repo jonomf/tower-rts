@@ -5,7 +5,7 @@ You build rooms; units train on their own and march on the enemy. Your weapon is
 
 **Status: M3, full matches against an AI.** Pick an opponent (Rusher, Expander, or a practice dummy) and a difficulty,
 build your tower, and destroy the enemy Core before yours falls. Overtime at 5:00 ends every match by 7:30.
-See [`.plan`](.plan) for the roadmap and [`DESIGN.md`](DESIGN.md) for the rules and numbers.
+See [`.plan`](.plan) for the roadmap (next: the Expedition pivot, designed in [`docs/expedition.md`](docs/expedition.md)) and [`DESIGN.md`](DESIGN.md) for the rules as built.
 
 **Play:** https://jonomf.github.io/tower-rts/ (deployed by GitHub Actions on every push to `main`)
 

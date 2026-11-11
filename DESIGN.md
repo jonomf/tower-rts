@@ -69,4 +69,4 @@ Rooms are served oldest first. A room that can't afford its unit holds that pric
 `at` is `front` (lane-side column), `back`, `merge` (next to a same-type room) or `up` (highest floor).
 By default the AI stops training to save for the next build (`saves: false` turns that off). After the order, standing
 rules fire when they hold and are affordable (`supplyCapped`, `bankOver`), and `rebuild` restores destroyed rooms.
-Levels: Relaxed never taps (40% producer income); Sharp taps every 3 s. It's the same shape the player-automation tie-in will use later.
+Levels: Relaxed never taps (40% producer income); Steady taps every 90 s (about 70%); Sharp taps every 3 s. It's the same shape the player-automation tie-in will use later.
