@@ -6,7 +6,7 @@ import { productionSystem } from './systems/production.ts';
 import { unitSystem } from './systems/units.ts';
 import { buildScenario, type ScenarioId } from './scenario.ts';
 import { coreOf, createTower, exitSide, faceOf, placeRoom, removeRoom, type TowerPlacement } from './tower.ts';
-import type { Command, CommandResult, Effect, Room, Team, Tower, TowerId, Unit } from './types.ts';
+import { opponent, type Command, type CommandResult, type Effect, type Room, type Team, type Tower, type TowerId, type Unit } from './types.ts';
 
 export const TICK_RATE = 20;
 export const DT = 1 / TICK_RATE;
@@ -111,17 +111,17 @@ export class World {
     return this.options.teams.length === 2 && this.seconds >= OVERTIME.start;
   }
 
-  /** Both Cores burn in overtime. If both fall on the same tick, the tower in better shape wins. */
+  /** Both sides' home Cores burn in overtime. If both fall on the same tick, the tower in better shape wins. */
   private overtime(): void {
     if (!this.inOvertime || this.winner !== null) return;
     const fallen: Team[] = [];
-    for (const t of this.towers) {
+    for (const t of [this.tower(0), this.tower(1)]) {
       const core = coreOf(t);
       if (!core) continue;
       core.hp -= OVERTIME.burn * DT;
       if (core.hp <= 0) fallen.push(t.team);
     }
-    if (fallen.length === 1) this.winner = fallen[0] === 0 ? 1 : 0;
+    if (fallen.length === 1) this.winner = opponent(fallen[0]);
     else if (fallen.length === 2) {
       const score = (team: Team) =>
         this.tower(team).rooms.reduce((s, r) => s + Math.max(0, r.hp), 0) + this.units.filter((u) => u.team === team).length;
@@ -175,8 +175,12 @@ export class World {
     this.effects.push({ kind: 'destroyed', tick: this.tick, team: t.team, x: t.x, col: room.col, floor: room.floor });
     removeRoom(t, room);
     if (room.def === 'core') {
-      this.winner = t.team === 0 ? 1 : 0;
-      return;
+      // A side's Core falling ends the game. (A neutral tower's Core just becomes rubble.)
+      const winner = opponent(t.team);
+      if (winner !== null) {
+        this.winner = winner;
+        return;
+      }
     }
     placeRoom(t, this.newId(), 'rubble', room.col, room.floor, true);
   }

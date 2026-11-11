@@ -2,22 +2,20 @@
  * Units: march along the world axis, stop to fight what they can hit, and chew into hostile tower faces.
  * The world is 1-D (x in cells). A unit walks in its own direction; team 0 starts toward +x in Skirmish.
  */
-import { LANE, ROOMS, TOWER, UNITS } from '../defs.ts';
-import { faceOf, roomAt, roomById } from '../tower.ts';
-import type { Room, Side, Team, Tower, Unit } from '../types.ts';
+import { LANE, TOWER, UNITS } from '../defs.ts';
+import { faceOf, roomAt } from '../tower.ts';
+import { hostile, type Room, type Side, type Team, type Tower, type Unit } from '../types.ts';
 import type { World } from '../world.ts';
 
-export const dirOf = (team: Team): 1 | -1 => (team === 0 ? 1 : -1);
-
 /**
- * The nearest tower of another team ahead of a unit walking in `dir` from `x`, and the face it would reach.
+ * The nearest hostile tower ahead of a unit walking in `dir` from `x`, and the face it would reach.
  * A tower counts as ahead while its near face is at or beyond `x` (minus the unit's reach, so a unit already
  * standing at a face keeps it as its target).
  */
 export function towerAhead(w: World, team: Team, x: number, dir: 1 | -1, reach: number): { tower: Tower; side: Side; face: number } | undefined {
   let best: { tower: Tower; side: Side; face: number } | undefined;
   for (const t of w.towers) {
-    if (t.team === team) continue;
+    if (!hostile(team, t.team)) continue;
     const side: Side = dir > 0 ? 'left' : 'right';
     const face = faceOf(t, side);
     if ((face - x) * dir < -reach) continue;
@@ -61,7 +59,7 @@ export function unitSystem(w: World, dt: number): void {
     let best: Unit | undefined;
     let bestDist = Infinity;
     for (const v of w.units) {
-      if (v.team === u.team || v.hp <= 0 || !canHit(u, v)) continue;
+      if (!hostile(u.team, v.team) || v.hp <= 0 || !canHit(u, v)) continue;
       const dist = Math.abs(v.px - u.px);
       if (dist <= reach && dist < bestDist) {
         best = v;
@@ -117,13 +115,3 @@ export function unitSystem(w: World, dt: number): void {
   for (const u of w.units) if (u.hp <= 0) w.effects.push({ kind: 'died', tick: w.tick, x: u.x, alt: u.alt, team: u.team });
   w.units = w.units.filter((u) => u.hp > 0);
 }
-
-/** Room a unit is currently hitting, if any (for rendering). */
-export function targetRoom(w: World, u: Unit): Room | undefined {
-  if (u.target?.kind !== 'room') return undefined;
-  const id = u.target.tower;
-  const t = w.towers.find((x) => x.id === id);
-  return t ? roomById(t, u.target.id) : undefined;
-}
-
-export const isProduction = (r: Room): boolean => !!ROOMS[r.def].trains;

@@ -5,8 +5,9 @@ import { World } from '../src/sim/world.ts';
 import { AiController, stepWithAi } from '../src/ai/controller.ts';
 import { SCRIPTS } from '../src/ai/scripts.ts';
 import type { AiLevel } from '../src/ai/types.ts';
+import type { Team } from '../src/sim/types.ts';
 
-export type MatchResult = { winner: 0 | 1 | null; seconds: number; world: World };
+export type MatchResult = { winner: Team | null; seconds: number; world: World };
 
 export function runMatch(a: string, b: string, la: AiLevel, lb: AiLevel, seed: number, maxSeconds = 1200): MatchResult {
   const w = new World({ seed, teams: [0, 1] });

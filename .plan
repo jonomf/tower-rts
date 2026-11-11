@@ -47,8 +47,8 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       Units' `x` shifts by `+TOWER.cols` compared with today; `faceX(team)` is replaced by tower faces.
 - [x] `World.towers` becomes a plain list. `w.tower(team)` returns that team's first tower (so most call sites survive).
       Commands gain an optional `tower` id (default: the team's first tower).
-- [ ] Teams: `0` player, `1` hostile, `2` neutral. Add `hostile(a, b)` (only 0↔1). Replace every "the other team" computation.
-- [ ] Units gain `dir: 1 | -1` and `home: towerId | null`. Supply counts only units whose `home` is that tower.
+- [x] Teams: `0` player, `1` hostile, `2` neutral. Add `hostile(a, b)` (only 0↔1). Replace every "the other team" computation.
+- [x] Units gain `dir: 1 | -1` and `home: towerId | null`. Supply counts only units whose `home` is that tower.
 - [x] `frontRoom(tower, fromSide, reachesAllFloors)`: scan columns from the side the attacker stands on.
       A unit attacks the nearest hostile tower face ahead of it within reach; it stops at `face − dir × range`.
 - [x] `pickCell` in the AI mirrors `front`/`back` by `tower.front`.

@@ -4,6 +4,7 @@ import { World } from '../src/sim/world.ts';
 import { ECON, LANE, ROOMS, TOWER, UNITS, type RoomId } from '../src/sim/defs.ts';
 import { coreOf, roomAt, supplyMax } from '../src/sim/tower.ts';
 import { frontRoom } from '../src/sim/systems/units.ts';
+import { hostile } from '../src/sim/types.ts';
 import type { Team } from '../src/sim/types.ts';
 
 /** Two empty towers (just Cores), rich banks. */
@@ -227,4 +228,28 @@ test('determinism holds with units and combat (replay)', () => {
     w2.step();
   }
   assert.equal(w2.hash(), w.hash());
+});
+
+// ---- Teams, homes, supply (P1) ---------------------------------------------------
+
+test('hostile(): only the player and the hostile team fight; neutral fights no one', () => {
+  const teams: Team[] = [0, 1, 2];
+  const table = teams.map((a) => teams.map((b) => (hostile(a, b) ? 'x' : '.')).join('')).join(' ');
+  assert.equal(table, '.x. x.. ...');
+});
+
+test('units carry a direction and a home tower; supply counts only units whose home is that tower', () => {
+  const w = arena();
+  const home = w.tower(0);
+  const outpost = w.addTower(0, { x: -20, front: 'left', coreCol: 4 });
+  const a = w.spawnUnit('trooper', 0, 0);
+  const b = w.spawnUnit('bruiser', 0, 0, outpost);
+  const raider = w.spawnUnit('trooper', 1, 0, home); // spawned at someone else's tower: no home
+  assert.deepEqual([a.dir, a.home], [1, home.id]);
+  assert.deepEqual([b.dir, b.home], [-1, outpost.id], 'leaves from the outpost\'s left face');
+  assert.equal(b.x, outpost.x);
+  assert.equal(raider.home, null);
+  assert.equal(w.supplyUsed(home), UNITS.trooper.supply);
+  assert.equal(w.supplyUsed(outpost), UNITS.bruiser.supply);
+  assert.equal(w.supplyUsed(0), UNITS.trooper.supply, 'a team number means its home tower');
 });

@@ -1,8 +1,16 @@
 import type { Cost, RoomId, UnitId } from './defs.ts';
 
-export type Team = 0 | 1;
+/** 0: the player. 1: hostile to the player. 2: neutral (a trader; at war with no one). */
+export type Team = 0 | 1 | 2;
 export const PLAYER: Team = 0;
 export const ENEMY: Team = 1;
+export const NEUTRAL: Team = 2;
+
+/** Whether two teams fight each other. Only the player and the hostile team do. */
+export const hostile = (a: Team, b: Team): boolean => (a === 0 && b === 1) || (a === 1 && b === 0);
+
+/** The other side of the war (Skirmish win rule): 0 ↔ 1. Neutral has no opponent. */
+export const opponent = (t: Team): Team | null => (t === 0 ? 1 : t === 1 ? 0 : null);
 
 export type RoomInstId = number;
 
