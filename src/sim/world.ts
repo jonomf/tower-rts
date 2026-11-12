@@ -45,6 +45,24 @@ export function skirmishPlacement(team: Team): TowerPlacement {
 export type LoggedCommand = { tick: number; cmd: Command };
 
 /**
+ * Everything needed to resume a world exactly (save games). Plain JSON. Bump SAVE_VERSION whenever the shape of any
+ * sim state type changes (Tower, Room, Unit, WorldMap, options...), so old saves are discarded instead of misread.
+ */
+export const SAVE_VERSION = 1;
+export type WorldSnapshot = {
+  version: number;
+  options: WorldOptions;
+  tick: number;
+  rng: number;
+  nextId: number;
+  towers: Tower[];
+  units: Unit[];
+  map: WorldMap | null;
+  winner: Team | null;
+  commandLog: LoggedCommand[];
+};
+
+/**
  * The whole simulation: plain data + fixed-tick systems. No DOM, no wall clock, no Math.random.
  * Deterministic: the same options plus the same commands on the same ticks give the same hash().
  */
@@ -74,6 +92,39 @@ export class World {
       this.map = generateMap(this.options.seed);
     } else for (const team of this.options.teams) this.addTower(team, skirmishPlacement(team));
     buildScenario(this, this.options.scenario);
+  }
+
+  /** A deep copy of the full sim state (render-only effects are dropped). */
+  snapshot(): WorldSnapshot {
+    return structuredClone({
+      version: SAVE_VERSION,
+      options: this.options,
+      tick: this.tick,
+      rng: this.rng.state,
+      nextId: this.nextId,
+      towers: this.towers,
+      units: this.units,
+      map: this.map,
+      winner: this.winner,
+      commandLog: this.commandLog,
+    });
+  }
+
+  /** Rebuild a world from a snapshot. Throws if the snapshot is from another save version. */
+  static fromSnapshot(snap: WorldSnapshot): World {
+    if (snap.version !== SAVE_VERSION) throw new Error(`save version ${snap.version}, expected ${SAVE_VERSION}`);
+    const s = structuredClone(snap);
+    const w = new World({ ...s.options, scenario: 'none' });
+    (w.options as WorldOptions).scenario = s.options.scenario;
+    w.tick = s.tick;
+    w.rng.state = s.rng;
+    w.nextId = s.nextId;
+    w.towers.splice(0, w.towers.length, ...s.towers);
+    (w as { map: WorldMap | null }).map = s.map;
+    w.units = s.units;
+    w.winner = s.winner;
+    w.commandLog.splice(0, w.commandLog.length, ...s.commandLog);
+    return w;
   }
 
   get seconds(): number {

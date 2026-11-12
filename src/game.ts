@@ -4,7 +4,8 @@
  */
 import { ROOMS, type Cost, type RoomId, type UnitId } from './sim/defs.ts';
 import { groupOf, roomAt } from './sim/tower.ts';
-import { DT, World } from './sim/world.ts';
+import { DT, SAVE_VERSION, World } from './sim/world.ts';
+import type { SavedGame } from './ui/save.ts';
 import { PLAYER, type Command, type CommandResult, type Deploy, type Team } from './sim/types.ts';
 import { CELL_H, CELL_W, cellRect, type Cell } from './render/layout.ts';
 import { AiController } from './ai/controller.ts';
@@ -87,6 +88,36 @@ export class Game {
           ? `${script.name} is building. Mines first, then a Barracks.`
           : 'Practice: raze the dummy tower.',
     );
+  }
+
+  /** The current match as a save game, or null when there is nothing worth resuming. */
+  toSave(): SavedGame | null {
+    if (!this.started || this.world.winner !== null) return null;
+    return {
+      version: SAVE_VERSION,
+      savedAt: Date.now(),
+      config: { ...this.config },
+      speed: this.speed,
+      world: this.world.snapshot(),
+      ais: this.ais.map((a) => a.snapshot()),
+    };
+  }
+
+  /** Continue a saved match. It resumes paused, so the player can get their bearings. */
+  resume(s: SavedGame): void {
+    this.world = World.fromSnapshot(s.world);
+    this.ais = s.ais.map((a) => AiController.fromSnapshot(a, SCRIPTS));
+    this.config = { ...DEFAULT_MATCH, ...s.config };
+    this.speed = SPEEDS.includes(s.speed) ? s.speed : 1;
+    this.started = true;
+    this.paused = true;
+    this.placing = null;
+    this.selected = null;
+    this.floaters = [];
+    this.acc = 0;
+    this.lastAlert = -100;
+    this.onStart();
+    this.notify('Welcome back. Paused: press ▶ (or Space) to continue.');
   }
 
   /** One sim tick: AIs act, the world steps, alerts fire. */

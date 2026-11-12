@@ -6,6 +6,7 @@ import { MAP } from './sim/defs.ts';
 import { mapSpan, sectorCenter } from './sim/map.ts';
 import { attachInput } from './input/input.ts';
 import { Hud } from './ui/hud.ts';
+import { clearSave, writeSave } from './ui/save.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
 const game = new Game();
@@ -111,6 +112,17 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'f' || e.key === 'F') cycleView();
 });
 onResize();
+
+// ---- Save games: every few seconds and whenever the page is hidden or closed ----
+function autosave(): void {
+  const s = game.toSave();
+  if (s) writeSave(s);
+  else if (game.started && game.world.winner !== null) clearSave();
+}
+setInterval(autosave, 5000);
+document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && autosave());
+window.addEventListener('pagehide', autosave);
+hud.onBeforeMenu = autosave;
 
 let last = performance.now();
 function loop(now: number): void {

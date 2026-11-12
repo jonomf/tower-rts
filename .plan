@@ -90,6 +90,8 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       panel. The sim records it (`room.waiting`: minerals / gas / supply / posture), so it matches the hold-back rule.
 - [x] Posture: a tower-wide **Army / Build** toggle (top bar, key B; command `setPosture`). Build stops every room from
       starting a new unit (one in training finishes), to save for rooms. The AI never uses it.
+- [x] Save games (2026-11-12): autosave to the browser every 5 s and on hide/close; menu shows "Continue <mode · time>".
+      Resumes paused. A finished match clears the save. Versioned by `SAVE_VERSION` (see CLAUDE.md).
 
 ## P3: raids and defense ← FEEL-TEST GATE
 - [ ] `src/sim/systems/director.ts`: a deterministic raid director. First raid at 2:30, then every 60–90 s (seeded),
@@ -134,6 +136,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-12: save games (World/AI snapshots, autosave, Continue). 64 tests
 - 2026-11-11: waiting-reason icons + Army/Build posture (Jono's feedback). 60 tests
 - 2026-11-11: P2 done: client (sector strip, fog curtain, site signs, Deploy/Send/Recall, mode picker). 58 tests
 - 2026-11-11: P2 fog, discovery, caches (systems/explore.ts)

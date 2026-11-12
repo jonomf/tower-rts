@@ -21,6 +21,13 @@ Change numbers in the design doc and in `src/sim/defs.ts` together.
   ln -sf ../typescript/bin/tsc node_modules/.bin/tsc && ln -sf /opt/npm-tools/node_modules/@types/node node_modules/@types/node`
 - Tell Jono plainly what the numbers say, including when they say the design has a problem (see the M3 findings in `docs/plan-v1.md`).
 
+## Save games
+The current match autosaves to localStorage (`src/ui/save.ts`; key `tower-rts.save`) every 5 s and when the page is
+hidden or closed; the menu offers Continue. A save is `World.snapshot()` + `AiController.snapshot()`.
+**Whenever you change the shape of sim state** (fields on Tower, Room, Unit, WorldMap, Site, WorldOptions, AI controller
+state), bump `SAVE_VERSION` in `src/sim/world.ts` so old saves are dropped instead of misread, and keep
+`tests/save.test.ts` passing (a restored game must continue with the same hash).
+
 ## Lessons already paid for
 - The HUD must not rebuild interactive DOM on a timer. Rebuild on a structural key; update text separately (`Hud.setLines`).
 - Unit logic must read start-of-tick positions (`px`) and apply damage after the loop, or one team gets the first shot.

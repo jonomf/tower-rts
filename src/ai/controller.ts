@@ -41,6 +41,17 @@ export function pickCell(t: Tower, def: RoomId, where: Where): Cell | null {
   }
 }
 
+export type AiSnapshot = {
+  team: Team;
+  script: string;
+  level: AiLevel;
+  rng: number;
+  step: number;
+  saving: boolean;
+  trainUntil: number;
+  built: [string, BuildAction][];
+};
+
 export class AiController {
   readonly team: Team;
   readonly script: AiScript;
@@ -58,6 +69,32 @@ export class AiController {
     this.script = script;
     this.level = level;
     this.rng = new Rng(seed * 7919 + team + 1);
+  }
+
+  /** The controller's own state, for save games (the script itself is stored by id). */
+  snapshot(): AiSnapshot {
+    return {
+      team: this.team,
+      script: this.script.id,
+      level: this.level,
+      rng: this.rng.state,
+      step: this.step,
+      saving: this.saving,
+      trainUntil: this.trainUntil,
+      built: [...this.built],
+    };
+  }
+
+  static fromSnapshot(s: AiSnapshot, scripts: Record<string, AiScript>): AiController {
+    const script = scripts[s.script];
+    if (!script) throw new Error(`unknown AI script ${s.script}`);
+    const ai = new AiController(s.team, script, s.level, 0);
+    ai.rng.state = s.rng;
+    ai.step = s.step;
+    ai.saving = s.saving;
+    ai.trainUntil = s.trainUntil;
+    for (const [k, v] of s.built) ai.built.set(k, v);
+    return ai;
   }
 
   /** Call once before every world.step(). */

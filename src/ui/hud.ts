@@ -5,6 +5,7 @@ import { DEFAULT_MATCH, type Game, type GameMode, type MatchConfig } from '../ga
 import { SCRIPTS } from '../ai/scripts.ts';
 import type { AiLevel } from '../ai/types.ts';
 import type { Deploy } from '../sim/types.ts';
+import { clearSave, describeSave, loadSave } from './save.ts';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
 
@@ -78,9 +79,23 @@ export class Hud {
   private readonly menu = $('#menu');
   private choice: MatchConfig = loadChoice();
 
+  /** Called just before the menu opens over a running match (main.ts saves it). */
+  onBeforeMenu: () => void = () => {};
+
   private openMenu(): void {
+    this.onBeforeMenu();
     this.game.started = false;
+    this.refreshContinue();
     this.menu.classList.add('open');
+  }
+
+  /** Show "Continue" when there is a save to resume. */
+  private refreshContinue(): void {
+    const s = loadSave();
+    const btn = $<HTMLButtonElement>('#continue');
+    btn.hidden = !s;
+    if (s) btn.innerHTML = `Continue <span>${describeSave(s)}</span>`;
+    set($('#start'), s ? 'New game' : 'Start');
   }
 
   private buildMenu(): void {
@@ -125,6 +140,20 @@ export class Hud {
     group('#opponents', opponents, () => this.choice.opponent, (id) => (this.choice.opponent = id));
     group('#levels', levels, () => this.choice.level, (id) => (this.choice.level = id));
     syncMode();
+    $('#continue').addEventListener('click', () => {
+      const s = loadSave();
+      this.menu.classList.remove('open');
+      if (s) {
+        try {
+          this.game.resume(s);
+          return;
+        } catch {
+          clearSave();
+        }
+      }
+      this.game.start(this.choice);
+    });
+    this.refreshContinue();
     $('#start').addEventListener('click', () => {
       saveChoice(this.choice);
       this.menu.classList.remove('open');
@@ -183,6 +212,7 @@ export class Hud {
       ? `Took ${time}. Core HP left: ${Math.ceil(coreOf(this.game.tower)?.hp ?? 0)}.`
       : `You held out for ${time}.`;
     this.gameover.classList.toggle('won', won);
+    clearSave(); // a finished match isn't resumable
     this.gameover.classList.add('open');
   }
 

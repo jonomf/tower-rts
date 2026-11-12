@@ -209,6 +209,10 @@ i.s { color: var(--s); }
 #skirmish-opts.hidden { display: none; }
 #start { width: 100%; margin-top: 14px; min-height: 48px; font-weight: 800; font-size: 17px; background: var(--accent); color: #1b1e2e; border-color: var(--accent); }
 #start:hover { background: #ffd67e !important; }
+#continue { width: 100%; margin-top: 14px; min-height: 48px; font-weight: 800; font-size: 17px; border-color: var(--accent); color: var(--accent); }
+#continue span { font-weight: 500; font-size: 14px; color: var(--dim); margin-left: 6px; }
+#continue[hidden] { display: none; }
+#continue:not([hidden]) + #start { margin-top: 8px; background: rgba(255, 255, 255, 0.08); color: var(--text); border-color: var(--ui-line); font-size: 15px; min-height: 40px; }
 #gameover .acts { gap: 8px; }
 @media (orientation: landscape) and (max-height: 520px) {
   #menu .sheet { width: min(760px, 100%); padding: 10px 14px; }

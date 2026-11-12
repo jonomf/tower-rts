@@ -86,3 +86,7 @@ Levels: Relaxed never taps (40% producer income); Steady taps every 90 s (about 
   hostiles within half a sector of home, then walk back. Left/Right units march, fight, and hold at the map's last sector.
   **Recall** brings every unit home; **Send ◀ / ▶** marches the garrison out.
 - No win or loss yet (raids and the Stronghold come in P3/P4), and no overtime.
+
+## Save games
+One save slot in the browser. The match autosaves every 5 s and when you leave the page; the menu's **Continue** resumes
+it, paused. Starting a new game replaces it; winning or losing clears it.
