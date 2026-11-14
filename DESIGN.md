@@ -75,17 +75,25 @@ By default the AI stops training to save for the next build (`saves: false` turn
 rules fire when they hold and are affordable (`supplyCapped`, `bankOver`), and `rebuild` restores destroyed rooms.
 Levels: Relaxed never taps (40% producer income); Steady taps every 90 s (about 70%); Sharp taps every 3 s. It's the same shape the player-automation tie-in will use later.
 
-## Expedition (P2, in progress; design in docs/expedition.md)
+## Expedition (P3 built; design and raid table in docs/expedition.md)
 - One home tower centred on x = 0, open on both sides, Core in columns 3–4. The map is 11 sectors of 14 cells (−5..5).
-- Sites are generated per seed: Empty, Cache, Ruin, Camp, plus exactly one Stronghold (distance 3–5) and one Trader (2–4).
-  Camps, the Stronghold and the Trader are markers only until P3/P4.
+- Sites per seed: Empty, Cache, Ruin, Camp, plus one Stronghold (distance 3–5) and one Trader (2–4); the last two are
+  markers only until P4.
 - Fog: sectors −1..1 start explored. A player unit entering a sector explores it and finds its site. You see sectors
   holding your units or tower, and their neighbours; hostile units elsewhere are hidden.
 - Caches: the first of your units to reach the centre loots it (150–300 minerals, sometimes gas; more the farther out).
-- Each Barracks/Hangar has **Deploy: Left / Home / Right** (default Home here). Home units garrison the tower: they fight
-  hostiles within half a sector of home, then walk back. Left/Right units march, fight, and hold at the map's last sector.
-  **Recall** brings every unit home; **Send ◀ / ▶** marches the garrison out.
-- No win or loss yet (raids and the Stronghold come in P3/P4), and no overtime.
+- Each Barracks/Hangar has **Deploy: Left / Home / Right** (default Home). Home units garrison the tower: they fight
+  hostiles within half a sector of home, then walk back. Left/Right units march, fight, attack camps, and hold at the
+  map's last sector. **Recall** brings every unit home; **Send ◀ / ▶** marches the garrison out.
+- **Raids**: the first launches at 2:30, then every 55–90 s, from the left or right (never three running from one side).
+  A warning comes 12 s before launch. Squads start at 3–5 Troopers and grow; Bruisers from 5:00, Flyers from 9:00.
+  Raiders start at the nearest living Camp on that side, or at the map edge, and arrive together.
+  Difficulty scales squad size (Relaxed ×0.7, Steady ×1, Sharp ×1.3).
+- **Camps**: wall, Camp core (600 hp), wall. Destroying the core removes the camp, pays 200 minerals, and adds 15 s to
+  raid intervals on that side.
+- **Gun Nest** (100 ◆; 16 dmg/s to ground units within 3 cells) and **Flak** (100 ◆ 50 ▲; 20 dmg/s to air within
+  4 cells) must be the outermost room on their floor and cover the face(s) they have a clear line to.
+- You lose when the Core falls. There is no way to win until the Stronghold comes alive in P4. No overtime.
 
 ## Save games
 One save slot in the browser. The match autosaves every 5 s and when you leave the page; the menu's **Continue** resumes

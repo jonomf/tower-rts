@@ -38,3 +38,35 @@ export const SCRIPTS: Record<string, AiScript> = {
     rebuild: true,
   },
 };
+
+/**
+ * Scripted players for Expedition balance runs (`npm run match -- --mode expedition`). Not offered as opponents.
+ * homesteader: economy by the Core, a home garrison, a Gun Nest on each side, then a second Barracks that explores.
+ */
+export const BOTS: Record<string, AiScript> = {
+  homesteader: {
+    id: 'homesteader',
+    name: 'Homesteader',
+    blurb: 'Balance bot: garrison, two Gun Nests, then explore to the right and left.',
+    order: [
+      { build: 'mine', at: 'core' }, mine, mine,
+      { build: 'barracks', at: 'core', train: 'trooper', deploy: 'home' },
+      { build: 'gunNest', at: 'left' },
+      { build: 'gunNest', at: 'right' },
+      { build: 'quarters', at: 'up' }, train(40),
+      { build: 'barracks', at: 'core', train: 'trooper', deploy: 'right' },
+      { build: 'quarters', at: 'up' }, train(60),
+      { build: 'refinery', at: 'up' },
+      { build: 'flak', at: 'left' },
+      { build: 'flak', at: 'right' }, train(60),
+      { build: 'barracks', at: 'core', train: 'trooper', deploy: 'left' },
+      { build: 'quarters', at: 'up' },
+    ],
+    rules: [
+      { when: { supplyCapped: true }, do: { build: 'quarters', at: 'up' } },
+      { when: { bankOver: 400 }, do: { build: 'gunNest', at: 'left' } },
+      { when: { bankOver: 300 }, do: { build: 'gunNest', at: 'right' } },
+    ],
+    rebuild: true,
+  },
+};

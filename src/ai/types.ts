@@ -1,17 +1,19 @@
 /** AI scripts are plain data (JSON-shaped), so later the player can write them too. */
 import type { RoomId, UnitId } from '../sim/defs.ts';
+import type { Deploy } from '../sim/types.ts';
 
 /**
  * Where to put a room:
  * front = lane-side column, lowest floor · back = lowest floor, rearmost column ·
  * merge = next to a same-type room (else back) · up = highest floor available, rearmost column.
  */
-export type Where = 'front' | 'back' | 'merge' | 'up';
+export type Where = 'front' | 'back' | 'merge' | 'up' | 'core' | 'left' | 'right';
+// core = lowest floor, nearest the Core's columns · left / right = the outermost free cell on that side, lowest floor.
 
-export type BuildAction = { build: RoomId; at: Where; train?: UnitId };
+export type BuildAction = { build: RoomId; at: Where; train?: UnitId; deploy?: Deploy };
 
-/** An order step: build something, or keep training for a while before the next build. */
-export type Step = BuildAction | { train: number };
+/** An order step: build something, keep training for a while, or give the army an order (Expedition bots). */
+export type Step = BuildAction | { train: number } | { order: 'sendLeft' | 'sendRight' | 'recall' };
 
 export type Cond = { supplyCapped: true } | { bankOver: number };
 

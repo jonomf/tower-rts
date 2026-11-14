@@ -34,7 +34,7 @@ test('the raid schedule is deterministic per seed, and differs between seeds', (
   assert.notEqual(sched(11), sched(12));
 });
 
-test('first raid: warned 12 s ahead, launched at 2:30, 2–3 Troopers marching toward home', () => {
+test('first raid: warned 12 s ahead, launched at 2:30, 3–5 Troopers marching toward home', () => {
   const w = new World({ mode: 'expedition', seed: noCamps });
   const fx = run(w, 151, ['warning', 'raid']);
   assert.deepEqual(fx.map((e) => e.kind), ['warning', 'raid']);
@@ -44,12 +44,16 @@ test('first raid: warned 12 s ahead, launched at 2:30, 2–3 Troopers marching t
   assert.equal(warn.side, raid.side);
   assert.equal(warn.seconds, 12);
   const raiders = w.units.filter((u) => u.team === 1);
-  assert.ok(raiders.length >= 2 && raiders.length <= 3);
+  assert.ok(raiders.length >= RAIDS.phases[0].size[0] && raiders.length <= RAIDS.phases[0].size[1]);
   assert.ok(raiders.every((u) => u.def === 'trooper' && u.home === null && u.raid === 1 && u.dir === -raid.side));
   // No camp on this map: they come from the map edge.
   const span = mapSpan(w.map!);
   const edge = raid.side === -1 ? span.x0 : span.x1;
   assert.ok(raiders.every((u) => Math.abs(u.x - edge) < 3));
+  // Difficulty scales the squad.
+  const big = new World({ mode: 'expedition', seed: noCamps, raidScale: 3 });
+  run(big, 151, []);
+  assert.ok(big.units.filter((u) => u.team === 1).length >= 9);
 });
 
 test('raids launch from the nearest living Camp on their side; a destroyed Camp stops spawning', () => {
@@ -95,8 +99,8 @@ test('never three raids running from one side; squads grow with time', () => {
   assert.ok(raids.length >= 9, `raids: ${raids.length}`);
   for (let i = 2; i < raids.length; i++) assert.ok(!(raids[i].side === raids[i - 1].side && raids[i].side === raids[i - 2].side), `three in a row at ${i}`);
   const early = raids.filter((r) => r.tick < 300 * 20), late = raids.filter((r) => r.tick >= 720 * 20);
-  assert.ok(early.every((r) => r.size >= 2 && r.size <= 3));
-  assert.ok(late.length >= 2 && late.every((r) => r.size >= 8));
+  assert.ok(early.every((r) => r.size >= RAIDS.phases[0].size[0] && r.size <= RAIDS.phases[0].size[1]));
+  assert.ok(late.length >= 2 && late.every((r) => r.size >= RAIDS.phases[3].size[0]));
   assert.ok(late[late.length - 1].size > late[0].size, 'the last phase keeps growing');
 });
 

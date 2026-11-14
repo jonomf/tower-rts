@@ -83,3 +83,12 @@ test('M3 exit: replaying the command log with no AI attached reproduces the matc
 test('sharp beats relaxed with the same script', () => {
   for (const id of Object.keys(SCRIPTS)) assert.equal(runMatch(id, id, 'sharp', 'relaxed', 6).winner, 0, id);
 });
+
+test('the Expedition balance bot builds turrets, garrisons, explores, and runs deterministically', async () => {
+  const { runExpedition } = await import('../tools/match.ts');
+  const a = runExpedition('homesteader', 'steady', 7, 420);
+  assert.deepEqual(runExpedition('homesteader', 'steady', 7, 420), a);
+  assert.ok(a.survived && a.seconds === 420, 'alive at 7:00');
+  assert.ok(a.raids >= 3 && a.repelled >= 2, `raids ${a.raids}, repelled ${a.repelled}`);
+  assert.ok(a.explored > 3, `explored ${a.explored}`);
+});

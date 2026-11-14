@@ -2,7 +2,7 @@
  * Client state around the sim: time control, selection, placement mode, feedback.
  * Everything that changes the world goes through world.issue().
  */
-import { EXPEDITION_ONLY, ROOMS, type Cost, type RoomId, type UnitId } from './sim/defs.ts';
+import { EXPEDITION_ONLY, RAID_SCALE, ROOMS, type Cost, type RoomId, type UnitId } from './sim/defs.ts';
 import { groupOf, roomAt } from './sim/tower.ts';
 import { DT, SAVE_VERSION, World } from './sim/world.ts';
 import type { SavedGame } from './ui/save.ts';
@@ -70,7 +70,7 @@ export class Game {
     const expedition = config.mode === 'expedition';
     const script = expedition ? undefined : SCRIPTS[config.opponent];
     this.world = expedition
-      ? new World({ seed, mode: 'expedition' })
+      ? new World({ seed, mode: 'expedition', raidScale: RAID_SCALE[config.level] })
       : new World({ seed, teams: [0, 1], scenario: script ? 'none' : 'dummy' });
     this.ais = script ? [new AiController(1, script, config.level, seed)] : [];
     this.started = true;

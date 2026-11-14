@@ -48,6 +48,7 @@ state), bump `SAVE_VERSION` in `src/sim/world.ts` so old saves are dropped inste
 - `npm run typecheck`: browser tsconfig + node tsconfig (tests, tools, sim)
 - `npm run build`: tsc → `dist/js-<build id>/` (cache-busting), copies `public/` → `dist/`
 - `npm run match -- [--a rush] [--b boom] [--la sharp] [--lb sharp] [--n 50] [--all]`: headless AI vs AI (win rates, lengths)
+- `npm run match -- --mode expedition [--bot relaxed|steady|sharp] [--n 40]`: the homesteader bot vs raids (survival at 5/10/15 min)
 
 Before every commit: `npm run typecheck && npm test && npm run build`. Never push red.
 
@@ -73,7 +74,8 @@ src/sim/        defs.ts (all numbers: rooms, units, lane), types.ts (Team 0/1/2,
                 damageRoom, supplyUsed), rng.ts, commands.ts (optional `tower` id on every command), tower.ts
                 (grid, support, merge, supply, rubble cost, faceOf, exitSide, defaultDeploy), scenario.ts (dummy),
                 map.ts (Expedition sectors: sectorOf, sectorCenter, generateMap), systems/{economy,production,
-                units (orders: garrison/march; towerAhead, frontRoom), explore (fog, sites, caches, visibleSectors)}.ts
+                units (orders: garrison/march; towerAhead, frontRoom), explore (fog, sites, caches, visibleSectors),
+                defense (turrets), director (raid schedule, squads, repelled count)}.ts. Camps are towers of kind 'camp'
 src/ai/         types.ts (script format), scripts.ts (the scripts, as data), controller.ts (AiController, pickCell,
                 stepWithAi). The controller is outside the World and acts only through world.issue()
 src/game.ts     client state: match config + AIs, tick(), time control, selection, placing, floaters, toasts

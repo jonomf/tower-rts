@@ -123,7 +123,13 @@ export class Hud {
         $('#level-wrap').classList.toggle('off', this.choice.opponent === 'dummy');
       });
       render();
+      return render;
     };
+    const raidLevels: { id: AiLevel; name: string; blurb: string }[] = [
+      { id: 'relaxed', name: 'Relaxed', blurb: 'Smaller raids (about 70% size). Room to learn.' },
+      { id: 'steady', name: 'Steady', blurb: 'Standard raids. Expect to need turrets and a garrison.' },
+      { id: 'sharp', name: 'Sharp', blurb: 'Bigger raids (130%). You’ll need to tap everything.' },
+    ];
     const modes: { id: GameMode; name: string; blurb: string }[] = [
       { id: 'skirmish', name: 'Skirmish', blurb: 'Two towers, one lane. Destroy the enemy Core.' },
       { id: 'expedition', name: 'Expedition (new)', blurb: 'One tower in fogged country. Send squads out to explore and find caches.' },
@@ -131,6 +137,9 @@ export class Hud {
     const syncMode = () => {
       const exp = this.choice.mode === 'expedition';
       $('#skirmish-opts').classList.toggle('hidden', exp);
+      $('#expedition-opts').classList.toggle('hidden', !exp);
+      renderLevels();
+      renderRaidLevels();
       $('#level-wrap').classList.toggle('off', this.choice.opponent === 'dummy');
     };
     group('#modes', modes, () => this.choice.mode, (id) => {
@@ -138,7 +147,8 @@ export class Hud {
       syncMode();
     });
     group('#opponents', opponents, () => this.choice.opponent, (id) => (this.choice.opponent = id));
-    group('#levels', levels, () => this.choice.level, (id) => (this.choice.level = id));
+    const renderLevels = group('#levels', levels, () => this.choice.level, (id) => (this.choice.level = id));
+    const renderRaidLevels = group('#raid-levels', raidLevels, () => this.choice.level, (id) => (this.choice.level = id));
     syncMode();
     $('#continue').addEventListener('click', () => {
       const s = loadSave();

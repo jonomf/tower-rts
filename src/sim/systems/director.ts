@@ -50,7 +50,7 @@ export function createDirector(w: World): Director {
 /** What a raid launched at `seconds` is made of. */
 function squad(w: World, d: Director, seconds: number): UnitId[] {
   const p = phaseAt(seconds);
-  const n = between(w, p.size) + p.growth * d.late;
+  const n = Math.max(1, Math.round(between(w, p.size) * w.options.raidScale)) + p.growth * d.late;
   const units: UnitId[] = [];
   for (let i = 0; i < n; i++) {
     let def: UnitId = 'trooper';

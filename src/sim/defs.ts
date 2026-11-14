@@ -325,6 +325,9 @@ export const SITES = {
 
 // ---- Raids (docs/expedition.md) -----------------------------------------------------
 
+/** Raid squad size multiplier by difficulty level. */
+export const RAID_SCALE = { relaxed: 0.7, steady: 1, sharp: 1.3 };
+
 export const RAIDS = {
   /** Seconds until the first raid launches. */
   first: 150,
@@ -338,10 +341,10 @@ export const RAIDS = {
    * `mixed`: each unit is drawn from `mix`. `growth`: extra units per raid launched in this phase.
    */
   phases: [
-    { from: 0, interval: [75, 90], size: [2, 3], bruiser: 0, mixed: false, growth: 0 },
-    { from: 300, interval: [65, 80], size: [4, 6], bruiser: 0.3, mixed: false, growth: 0 },
-    { from: 480, interval: [60, 75], size: [6, 8], bruiser: 0, mixed: true, growth: 0 },
-    { from: 720, interval: [55, 70], size: [8, 8], bruiser: 0, mixed: true, growth: 1 },
+    { from: 0, interval: [75, 90], size: [3, 5], bruiser: 0, mixed: false, growth: 0 },
+    { from: 300, interval: [65, 80], size: [8, 10], bruiser: 0.3, mixed: false, growth: 0 },
+    { from: 480, interval: [60, 75], size: [12, 15], bruiser: 0, mixed: true, growth: 0 },
+    { from: 720, interval: [55, 70], size: [16, 16], bruiser: 0, mixed: true, growth: 1 },
   ] as { from: number; interval: [number, number]; size: [number, number]; bruiser: number; mixed: boolean; growth: number }[],
   mix: { trooper: 0.6, bruiser: 0.25, flyer: 0.15 },
   /** No Flyers before this time; they fly at this height. */

@@ -38,6 +38,12 @@ export function pickCell(t: Tower, def: RoomId, where: Where): Cell | null {
     }
     case 'back':
       return by((c) => c.floor * 100 + depth(c));
+    case 'core':
+      return by((c) => c.floor * 100 + Math.abs(c.col + 0.5 - (t.coreCol + 1)));
+    case 'left':
+      return by((c) => c.floor * 100 + c.col);
+    case 'right':
+      return by((c) => c.floor * 100 - c.col);
   }
 }
 
@@ -114,6 +120,12 @@ export class AiController {
     // 1. The build order. Stop training to save for the next step.
     while (this.step < this.script.order.length) {
       const a = this.script.order[this.step];
+      if ('order' in a) {
+        if (a.order === 'recall') w.issue({ type: 'recall', team: this.team });
+        else w.issue({ type: 'sendGarrison', team: this.team, dir: a.order === 'sendLeft' ? -1 : 1 });
+        this.step++;
+        continue;
+      }
       if (!('build' in a)) {
         if (this.trainUntil < 0) this.trainUntil = w.tick + a.train * 20;
         if (w.tick < this.trainUntil) return;
@@ -161,6 +173,7 @@ export class AiController {
   private build(w: World, a: BuildAction, cell: Cell): void {
     const res = w.issue({ type: 'build', team: this.team, room: a.build, col: cell.col, floor: cell.floor });
     if (res.ok) this.built.set(`${cell.col},${cell.floor}`, a);
+    if (res.ok && a.deploy) w.issue({ type: 'setDeploy', team: this.team, col: cell.col, floor: cell.floor, deploy: a.deploy });
   }
 
   /** Production rooms train their scripted unit, or nothing while saving (a unit in progress is finished first). */

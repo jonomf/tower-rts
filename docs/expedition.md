@@ -33,12 +33,25 @@ out, sector by sector, to find supplies, burn out raider camps, meet a trader, a
 - Recall: every player unit becomes `garrison`. Send left/right: every garrison unit becomes `march`.
 
 ## Raids (director)
-| Game time | Interval | Squad |
+| Game time | Interval | Squad (Steady) |
 |---|---|---|
-| 2:30–5:00 | 75–90 s | 2–3 Troopers |
-| 5:00–8:00 | 65–80 s | 4–6 Troopers, 30% chance +1 Bruiser |
-| 8:00–12:00 | 60–75 s | 6–8 mixed, Flyers from 9:00 |
-| 12:00+ | 55–70 s | +1 unit per raid, uncapped |
+| 2:30–5:00 | 75–90 s | 3–5 Troopers |
+| 5:00–8:00 | 65–80 s | 8–10 Troopers, 30% chance +1 Bruiser |
+| 8:00–12:00 | 60–75 s | 12–15 mixed (60% Trooper, 25% Bruiser, 15% Flyer), Flyers from 9:00 |
+| 12:00+ | 55–70 s | 16, +1 unit per raid, uncapped |
+
+Sizes were doubled from the first draft after balance runs (2026-11-14): at the draft sizes the Steady bot never died.
+Difficulty scales squad size: Relaxed ×0.7, Steady ×1, Sharp ×1.3 (`RAID_SCALE`).
+`npm run match -- --mode expedition --n 40` (bot: homesteader; rows are how often the bot taps, raids at Steady):
+
+| Bot taps | alive 5:00 | 10:00 | 15:00 |
+|---|---|---|---|
+| never (relaxed) | 100% | 10% | 0% |
+| every 90 s (steady) | 100% | 85% | 60% |
+| every 3 s (sharp) | 100% | 100% | 100% |
+
+So tapping is still the biggest lever in the game (old Q6): a constant tapper is nearly immune at these sizes.
+A squad marches at its slowest unit's pace. From the map edge it takes about 75 s to arrive; from a Camp, less.
 - Side: random, but never the same side three times running. A side with a living Camp is twice as likely.
 - Each destroyed Camp: +15 s to intervals on that side and 200 minerals loot.
 - Warning 12 s before spawn. Raiders spawn at the Camp's face, or at the map edge if there is none.

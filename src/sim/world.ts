@@ -30,6 +30,8 @@ export type WorldOptions = {
    * in sector 0 of a generated, fogged map; `teams` is ignored.
    */
   mode: 'skirmish' | 'expedition';
+  /** Expedition difficulty: multiplies raid squad sizes (RAID_SCALE in defs.ts). */
+  raidScale: number;
 };
 
 /** Expedition home tower: centred on x = 0, open on both sides, Core in the middle columns. */
@@ -51,7 +53,7 @@ export type LoggedCommand = { tick: number; cmd: Command };
  * Everything needed to resume a world exactly (save games). Plain JSON. Bump SAVE_VERSION whenever the shape of any
  * sim state type changes (Tower, Room, Unit, WorldMap, options...), so old saves are discarded instead of misread.
  */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export type WorldSnapshot = {
   version: number;
   options: WorldOptions;
@@ -90,7 +92,7 @@ export class World {
   private nextId = 1;
 
   constructor(options: Partial<WorldOptions> = {}) {
-    this.options = { seed: 1, teams: [0], autoCollectRate: ECON.autoCollectRate, scenario: 'none', mode: 'skirmish', ...options };
+    this.options = { seed: 1, teams: [0], autoCollectRate: ECON.autoCollectRate, scenario: 'none', mode: 'skirmish', raidScale: 1, ...options };
     this.rng = new Rng(this.options.seed);
     if (this.options.mode === 'expedition') {
       this.options.teams = [0];

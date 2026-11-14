@@ -106,12 +106,17 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       Skirmish AI has no answer to turrets. The sim allows them anywhere.) Must be on an outer column of their floor.
       They shoot hostiles within range of that face. Numbers in `docs/expedition.md`.
 - [x] Home tower for Expedition: Core in the middle (cols 2–3), `front: 'both'`. (Done in P2.)
-- [ ] Balance tool: `npm run match -- --mode expedition --bot steady --n 100` runs a scripted player
+- [x] Balance tool: `npm run match -- --mode expedition [--bot relaxed|steady|sharp] --n 40` (bot `homesteader` in
+      `src/ai/scripts.ts`; `--bot` is how often it taps). Result after tuning: Steady bot alive at 10:00 in 85% of seeds
+      (target was 60–80%), 60% at 15:00. Raid sizes were doubled from the draft to get there, and the menu difficulty now
+      scales raids (Relaxed ×0.7, Steady ×1, Sharp ×1.3). Table and findings in `docs/expedition.md`. Original spec:
+      `npm run match -- --mode expedition --bot steady --n 100` runs a scripted player
       (an `AiController` on team 0 that also issues deploy orders) and prints: survival rate at 5/10/15 min, raids repelled,
       sectors explored. Target before the feel test: the bot survives to 10 min in 60–80% of seeds.
 - [x] Tests: raid schedule is deterministic per seed; warning precedes spawn; Gun Nest ignores air and Flak ignores ground;
       a destroyed Camp stops spawning.
 - Exit: **Jono plays Expedition and answers the feel test at the bottom of this file.** Do not start P4 before that.
+  (Built and live 2026-11-14. There is no way to win yet, by design: the Stronghold is P4. A run ends when the Core falls.)
 
 ## P4: the other towers
 - [ ] Stronghold: an AI-run hostile tower (reuse `AiController` + a script). Dormant (economy only) until discovered,
@@ -139,6 +144,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-14: P3 built: client, balance bot, raid sizes tuned, difficulty scales raids. SAVE_VERSION 3. 75 tests. Feel test pending
 - 2026-11-14: P3 camps + raid director (sim). 74 tests
 - 2026-11-14: P3 defense rooms (Gun Nest, Flak; systems/defense.ts). SAVE_VERSION 2
 - 2026-11-12: save games (World/AI snapshots, autosave, Continue). 64 tests
