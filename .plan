@@ -94,11 +94,13 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       Resumes paused. A finished match clears the save. Versioned by `SAVE_VERSION` (see CLAUDE.md).
 
 ## P3: raids and defense ← FEEL-TEST GATE
-- [ ] `src/sim/systems/director.ts`: a deterministic raid director. First raid at 2:30, then every 60–90 s (seeded),
+- [x] `src/sim/systems/director.ts`: a deterministic raid director. (Sim done; a squad marches at its slowest unit's
+      pace so it arrives together. From the map edge a raid takes ~75 s to arrive; from a camp, less.)
+      Original spec: First raid at 2:30, then every 60–90 s (seeded),
       alternating/weighted by side. Size grows with time (see table in `docs/expedition.md`). Raids spawn from the nearest
       living Camp on that side, else from the map edge. Emit a `warning` effect 12 s before; the client shows
       "Raid from the left in 12 s" and marks the side on the strip.
-- [ ] Camps: small hostile towers from a preset layout (Core + 2–3 rooms, no production UI). Destroying one stops raids
+- [x] Camps: small hostile towers from a preset layout (Core + 2–3 rooms, no production UI). Destroying one stops raids
       from it, grants loot, and lengthens the raid interval on that side.
 - [x] Defense rooms: **Gun Nest** (anti-ground) and **Flak** (anti-air). (Offered in Expedition only for now: the
       Skirmish AI has no answer to turrets. The sim allows them anywhere.) Must be on an outer column of their floor.
@@ -107,7 +109,7 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
 - [ ] Balance tool: `npm run match -- --mode expedition --bot steady --n 100` runs a scripted player
       (an `AiController` on team 0 that also issues deploy orders) and prints: survival rate at 5/10/15 min, raids repelled,
       sectors explored. Target before the feel test: the bot survives to 10 min in 60–80% of seeds.
-- [ ] Tests: raid schedule is deterministic per seed; warning precedes spawn; Gun Nest ignores air and Flak ignores ground;
+- [x] Tests: raid schedule is deterministic per seed; warning precedes spawn; Gun Nest ignores air and Flak ignores ground;
       a destroyed Camp stops spawning.
 - Exit: **Jono plays Expedition and answers the feel test at the bottom of this file.** Do not start P4 before that.
 
@@ -137,6 +139,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-14: P3 camps + raid director (sim). 74 tests
 - 2026-11-14: P3 defense rooms (Gun Nest, Flak; systems/defense.ts). SAVE_VERSION 2
 - 2026-11-12: save games (World/AI snapshots, autosave, Continue). 64 tests
 - 2026-11-11: waiting-reason icons + Army/Build posture (Jono's feedback). 60 tests

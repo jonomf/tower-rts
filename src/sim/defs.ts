@@ -6,7 +6,7 @@
 export type Res = 'minerals' | 'gas';
 export type Cost = { minerals: number; gas: number };
 
-export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'barracks' | 'hangar' | 'wall' | 'gunNest' | 'flak' | 'rubble';
+export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'barracks' | 'hangar' | 'wall' | 'gunNest' | 'flak' | 'rubble' | 'campCore';
 export type UnitId = 'trooper' | 'bruiser' | 'flyer';
 
 export type RoomDef = {
@@ -154,6 +154,18 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     buildable: true,
     color: '#2f8f8f',
     blurb: 'Shoots air units near its side of the tower. Must be the outermost room on its floor.',
+  },
+  campCore: {
+    id: 'campCore',
+    name: 'Camp',
+    width: 2,
+    cost: { minerals: 0, gas: 0 },
+    buildTime: 0,
+    hp: 600,
+    mergeable: false,
+    buildable: false,
+    color: '#8a2b2b',
+    blurb: 'The heart of a raider camp. Destroy it and the camp is gone.',
   },
   rubble: {
     id: 'rubble',
@@ -310,3 +322,37 @@ export const SITES = {
   /** Cache loot: minerals in [min, max], with a gasChance of [gasMin, gasMax] gas, +perSector for each sector beyond 1. */
   cacheLoot: { min: 150, max: 300, gasChance: 0.3, gasMin: 50, gasMax: 100, perSector: 0.25 },
 };
+
+// ---- Raids (docs/expedition.md) -----------------------------------------------------
+
+export const RAIDS = {
+  /** Seconds until the first raid launches. */
+  first: 150,
+  /** Seconds of warning before a raid launches. */
+  warn: 12,
+  /** Minerals for destroying a Camp, and seconds added to raid intervals on that side per destroyed Camp. */
+  campLoot: 200,
+  campDelay: 15,
+  /**
+   * By game time (seconds): seconds between raids, and squad size. `bruiser`: chance of one extra Bruiser.
+   * `mixed`: each unit is drawn from `mix`. `growth`: extra units per raid launched in this phase.
+   */
+  phases: [
+    { from: 0, interval: [75, 90], size: [2, 3], bruiser: 0, mixed: false, growth: 0 },
+    { from: 300, interval: [65, 80], size: [4, 6], bruiser: 0.3, mixed: false, growth: 0 },
+    { from: 480, interval: [60, 75], size: [6, 8], bruiser: 0, mixed: true, growth: 0 },
+    { from: 720, interval: [55, 70], size: [8, 8], bruiser: 0, mixed: true, growth: 1 },
+  ] as { from: number; interval: [number, number]; size: [number, number]; bruiser: number; mixed: boolean; growth: number }[],
+  mix: { trooper: 0.6, bruiser: 0.25, flyer: 0.15 },
+  /** No Flyers before this time; they fly at this height. */
+  flyersFrom: 540,
+  flyerAlt: 4.5,
+  /** Raiders spawn this far apart (cells), so a squad arrives as a group. */
+  spacing: 0.5,
+};
+
+/** A raider camp, columns left to right, bottom floor first. Its Core is 2 wide. */
+export const CAMP_LAYOUT: (RoomId | null)[][] = [
+  [null, 'wall', 'campCore', null, 'wall', null],
+  [null, null, 'quarters', 'quarters', null, null],
+];

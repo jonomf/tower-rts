@@ -37,8 +37,11 @@ test('a restored Expedition keeps its map, fog, sites and unit orders', () => {
   w.issue({ type: 'setPosture', team: 0, posture: 'build' });
   w.stepSeconds(5);
   w.issue({ type: 'setPosture', team: 0, posture: 'army' });
-  w.stepSeconds(60);
+  w.stepSeconds(160); // past the first raid, so raiders and the director's schedule are in the save
+  assert.ok(w.director!.raids >= 1);
   const w2 = World.fromSnapshot(roundTrip(w.snapshot()));
+  assert.deepEqual(w2.director, w.director);
+  assert.equal(w2.towers.length, w.towers.length);
   assert.equal(w2.options.mode, 'expedition');
   assert.deepEqual(w2.map, w.map);
   assert.ok(w2.map!.explored.filter(Boolean).length > 3);

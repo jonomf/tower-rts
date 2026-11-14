@@ -75,6 +75,28 @@ export type Unit = {
   hp: number;
   cooldown: number;
   target: Target | null;
+  /** Raiders: which raid this unit belongs to. */
+  raid: number | null;
+  /** Raiders: speed cap while marching (the squad's slowest unit), so a raid arrives together. */
+  pace: number | null;
+};
+
+/** The raid director's state (Expedition). */
+export type Director = {
+  /** Tick the next raid launches, and from which side (-1 left, 1 right). */
+  nextAt: number;
+  side: -1 | 1;
+  /** The warning for the next raid has been given. */
+  warned: boolean;
+  /** Sides of the last two raids (never three in a row from one side). */
+  recent: (-1 | 1)[];
+  /** Raids launched, raids whose units have all died, and ids of raids still alive. */
+  raids: number;
+  repelled: number;
+  live: number[];
+  /** Raids launched in the last (growing) phase. */
+  late: number;
+  campsDown: { left: number; right: number };
 };
 
 export type TowerId = number;
@@ -104,7 +126,12 @@ export type Effect =
   /** Expedition: a player unit entered a sector and found its site. */
   | { kind: 'discovered'; tick: number; sector: number; site: SiteKind }
   /** Expedition: a cache was looted at axis position x. */
-  | { kind: 'loot'; tick: number; x: number; gained: Cost };
+  | { kind: 'loot'; tick: number; x: number; gained: Cost }
+  /** Expedition: a raid will launch from `side` in `seconds`. */
+  | { kind: 'warning'; tick: number; side: -1 | 1; seconds: number }
+  | { kind: 'raid'; tick: number; side: -1 | 1; size: number }
+  | { kind: 'repelled'; tick: number; count: number }
+  | { kind: 'campDestroyed'; tick: number; x: number; sector: number; gained: Cost };
 
 export type Tower = {
   id: TowerId;
@@ -114,6 +141,8 @@ export type Tower = {
   /** Leftmost column of the Core (on floor 0). */
   coreCol: number;
   front: Front;
+  /** main: a full tower with a Core. camp: a small raider camp (Expedition); destroyed with its campCore. */
+  kind: 'main' | 'camp';
   posture: Posture;
   bank: Cost;
   rooms: Room[];

@@ -124,7 +124,7 @@ export function unitSystem(w: World, dt: number): void {
 
     // 4. March on. Never past the face of the hostile tower ahead, nor past the centre of the last sector.
     u.target = null;
-    u.x += dir * d.speed * dt;
+    u.x += dir * Math.min(d.speed, u.pace ?? Infinity) * dt;
     if (ahead) {
       const stop = ahead.face - dir * d.attack.range;
       if ((u.x - stop) * dir > 0) u.x = stop;

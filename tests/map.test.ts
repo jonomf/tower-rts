@@ -48,7 +48,9 @@ test('the same seed gives the same map; different seeds vary', () => {
 
 test('an Expedition world: one home tower centred in sector 0, open both ways, Core in the middle', () => {
   const w = new World({ mode: 'expedition', seed: 3 });
-  assert.equal(w.towers.length, 1);
+  // P3: camps are small hostile towers, so count main towers and camps separately.
+  assert.equal(w.towers.filter((t) => t.kind === 'main').length, 1);
+  assert.equal(w.towers.filter((t) => t.kind === 'camp').length, w.map!.sites.filter((x) => x.kind === 'camp').length);
   const home = w.tower(0);
   assert.equal(home.x + TOWER.cols / 2, 0);
   assert.equal(home.front, 'both');

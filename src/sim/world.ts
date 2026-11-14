@@ -1,4 +1,4 @@
-import { ECON, LANE, OVERTIME, TOWER, UNITS, type UnitId } from './defs.ts';
+import { CAMP_LAYOUT, ECON, LANE, OVERTIME, RAIDS, TOWER, UNITS, type UnitId } from './defs.ts';
 import { applyCommand } from './commands.ts';
 import { Rng, fnv1a } from './rng.ts';
 import { constructionSystem, economySystem } from './systems/economy.ts';
@@ -7,7 +7,9 @@ import { unitSystem } from './systems/units.ts';
 import { exploreSystem } from './systems/explore.ts';
 import { defenseSystem } from './systems/defense.ts';
 import { buildScenario, type ScenarioId } from './scenario.ts';
-import { generateMap } from './map.ts';
+import { generateMap, sectorCenter, sectorOf, siteAt } from './map.ts';
+import { createDirector, directorSystem } from './systems/director.ts';
+import type { Director } from './types.ts';
 import { coreOf, createTower, exitSide, faceOf, placeRoom, removeRoom, type TowerPlacement } from './tower.ts';
 import type { Deploy } from './types.ts';
 import { opponent, type Command, type CommandResult, type Effect, type Room, type Team, type Tower, type TowerId, type Unit, type WorldMap } from './types.ts';
@@ -59,6 +61,7 @@ export type WorldSnapshot = {
   towers: Tower[];
   units: Unit[];
   map: WorldMap | null;
+  director: Director | null;
   winner: Team | null;
   commandLog: LoggedCommand[];
 };
@@ -75,6 +78,8 @@ export class World {
   readonly towers: Tower[] = [];
   /** Expedition only: sectors, sites and fog. */
   readonly map: WorldMap | null = null;
+  /** Expedition only: the raid schedule. */
+  director: Director | null = null;
   units: Unit[] = [];
   /** Render-only events (shots, deaths, destroyed rooms). Not part of the hash. */
   effects: Effect[] = [];
@@ -91,6 +96,8 @@ export class World {
       this.options.teams = [0];
       this.addTower(0, EXPEDITION_HOME);
       this.map = generateMap(this.options.seed);
+      for (const site of this.map.sites) if (site.kind === 'camp') this.addCamp(site.sector);
+      this.director = createDirector(this);
     } else for (const team of this.options.teams) this.addTower(team, skirmishPlacement(team));
     buildScenario(this, this.options.scenario);
   }
@@ -106,6 +113,7 @@ export class World {
       towers: this.towers,
       units: this.units,
       map: this.map,
+      director: this.director,
       winner: this.winner,
       commandLog: this.commandLog,
     });
@@ -122,6 +130,7 @@ export class World {
     w.nextId = s.nextId;
     w.towers.splice(0, w.towers.length, ...s.towers);
     (w as { map: WorldMap | null }).map = s.map;
+    w.director = s.director;
     w.units = s.units;
     w.winner = s.winner;
     w.commandLog.splice(0, w.commandLog.length, ...s.commandLog);
@@ -144,9 +153,23 @@ export class World {
     return t;
   }
 
+  /** A raider camp (team 1) centred in a sector: a small tower that never builds. */
+  addCamp(sector: number): Tower {
+    const t = createTower(this.newId(), 1, { x: sectorCenter(sector) - TOWER.cols / 2, front: 'both', coreCol: 2 });
+    t.kind = 'camp';
+    t.bank = { minerals: 0, gas: 0 };
+    CAMP_LAYOUT.forEach((row, floor) =>
+      row.forEach((def, col) => {
+        if (def) placeRoom(t, this.newId(), def, col, floor, true);
+      }),
+    );
+    this.towers.push(t);
+    return t;
+  }
+
   /** A team's first tower (its home). */
   tower(team: Team): Tower {
-    const t = this.towers.find((x) => x.team === team);
+    const t = this.towers.find((x) => x.team === team && x.kind === 'main');
     if (!t) throw new Error(`team ${team} has no tower`);
     return t;
   }
@@ -173,6 +196,7 @@ export class World {
     unitSystem(this, DT);
     exploreSystem(this);
     productionSystem(this, DT);
+    directorSystem(this);
     this.overtime();
     this.tick++;
     if (this.effects.length) this.effects = this.effects.filter((e) => this.tick - e.tick <= EFFECT_TTL);
@@ -235,6 +259,32 @@ export class World {
       hp: d.hp,
       cooldown: 0,
       target: null,
+      raid: null,
+      pace: null,
+    };
+    this.units.push(u);
+    return u;
+  }
+
+  /** A raider (team 1, no home) appears at `x`, marching in `dir`. */
+  spawnRaider(def: UnitId, x: number, dir: 1 | -1, raid: number, pace: number): Unit {
+    const d = UNITS[def];
+    const u: Unit = {
+      id: this.newId(),
+      def,
+      team: 1,
+      x,
+      px: x,
+      dir,
+      home: null,
+      order: 'march',
+      alt: d.air ? RAIDS.flyerAlt : 0,
+      depth: this.rng.next(),
+      hp: d.hp,
+      cooldown: 0,
+      target: null,
+      raid,
+      pace,
     };
     this.units.push(u);
     return u;
@@ -248,6 +298,7 @@ export class World {
     if (room.hp > 0) return;
     this.effects.push({ kind: 'destroyed', tick: this.tick, team: t.team, x: t.x, col: room.col, floor: room.floor });
     removeRoom(t, room);
+    if (room.def === 'campCore') return this.destroyCamp(t);
     if (room.def === 'core') {
       // A side's Core falling ends the game. (A neutral tower's Core just becomes rubble.)
       const winner = opponent(t.team);
@@ -259,6 +310,23 @@ export class World {
     placeRoom(t, this.newId(), 'rubble', room.col, room.floor, true);
   }
 
+  /** A camp whose Core fell is gone: no more raids from it, loot for the player, slower raids on that side. */
+  private destroyCamp(t: Tower): void {
+    this.towers.splice(this.towers.indexOf(t), 1);
+    const centre = t.x + TOWER.cols / 2;
+    const sector = sectorOf(centre);
+    const site = this.map && siteAt(this.map, sector);
+    if (site) site.claimed = true;
+    const gained = { minerals: RAIDS.campLoot, gas: 0 };
+    const home = this.towers.find((x) => x.team === 0 && x.kind === 'main');
+    if (home) {
+      home.bank.minerals += gained.minerals;
+      home.income.minerals += gained.minerals;
+    }
+    if (this.director) this.director.campsDown[centre < 0 ? 'left' : 'right']++;
+    this.effects.push({ kind: 'campDestroyed', tick: this.tick, x: centre, sector, gained });
+  }
+
   stepSeconds(s: number): void {
     const n = Math.round(s * TICK_RATE);
     for (let i = 0; i < n; i++) this.step();
@@ -267,7 +335,16 @@ export class World {
   /** Fingerprint of the full sim state. */
   hash(): string {
     return fnv1a(
-      JSON.stringify({ tick: this.tick, rng: this.rng.state, id: this.nextId, towers: this.towers, units: this.units, map: this.map, winner: this.winner }),
+      JSON.stringify({
+        tick: this.tick,
+        rng: this.rng.state,
+        id: this.nextId,
+        towers: this.towers,
+        units: this.units,
+        map: this.map,
+        director: this.director,
+        winner: this.winner,
+      }),
     );
   }
 }
