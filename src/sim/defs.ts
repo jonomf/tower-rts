@@ -6,7 +6,7 @@
 export type Res = 'minerals' | 'gas';
 export type Cost = { minerals: number; gas: number };
 
-export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'barracks' | 'hangar' | 'wall' | 'rubble';
+export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'barracks' | 'hangar' | 'wall' | 'gunNest' | 'flak' | 'rubble';
 export type UnitId = 'trooper' | 'bruiser' | 'flyer';
 
 export type RoomDef = {
@@ -29,6 +29,11 @@ export type RoomDef = {
   trains?: UnitId[];
   /** Lowest floor this room may be built on. */
   minFloor?: number;
+  /**
+   * Defense rooms: shoots the nearest hostile unit (air or ground, per hitsAir) within `range` cells of an open face.
+   * Must be built with nothing between it and a front face on its floor; walled in later, it stops firing.
+   */
+  turret?: { damage: number; cooldown: number; range: number; hitsAir: boolean };
   color: string;
   blurb: string;
 };
@@ -124,6 +129,32 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     color: '#6c757d',
     blurb: 'Does nothing but soak damage. Cheap armor for the lane side.',
   },
+  gunNest: {
+    id: 'gunNest',
+    name: 'Gun Nest',
+    width: 1,
+    cost: { minerals: 100, gas: 0 },
+    buildTime: 12,
+    hp: 400,
+    turret: { damage: 8, cooldown: 0.5, range: 3, hitsAir: false },
+    mergeable: false,
+    buildable: true,
+    color: '#a23b3b',
+    blurb: 'Shoots ground units near its side of the tower. Must be the outermost room on its floor.',
+  },
+  flak: {
+    id: 'flak',
+    name: 'Flak',
+    width: 1,
+    cost: { minerals: 100, gas: 50 },
+    buildTime: 12,
+    hp: 400,
+    turret: { damage: 12, cooldown: 0.6, range: 4, hitsAir: true },
+    mergeable: false,
+    buildable: true,
+    color: '#2f8f8f',
+    blurb: 'Shoots air units near its side of the tower. Must be the outermost room on its floor.',
+  },
   rubble: {
     id: 'rubble',
     name: 'Rubble',
@@ -139,7 +170,9 @@ export const ROOMS: Record<RoomId, RoomDef> = {
 };
 
 /** Build palette order. */
-export const PALETTE: RoomId[] = ['mine', 'refinery', 'quarters', 'barracks', 'hangar', 'wall'];
+export const PALETTE: RoomId[] = ['mine', 'refinery', 'quarters', 'barracks', 'hangar', 'wall', 'gunNest', 'flak'];
+/** Rooms offered only in Expedition (the Skirmish AI has no answer to turrets yet). */
+export const EXPEDITION_ONLY: RoomId[] = ['gunNest', 'flak'];
 
 export const TOWER = {
   cols: 6,

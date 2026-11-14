@@ -5,6 +5,7 @@ import { constructionSystem, economySystem } from './systems/economy.ts';
 import { productionSystem } from './systems/production.ts';
 import { unitSystem } from './systems/units.ts';
 import { exploreSystem } from './systems/explore.ts';
+import { defenseSystem } from './systems/defense.ts';
 import { buildScenario, type ScenarioId } from './scenario.ts';
 import { generateMap } from './map.ts';
 import { coreOf, createTower, exitSide, faceOf, placeRoom, removeRoom, type TowerPlacement } from './tower.ts';
@@ -48,7 +49,7 @@ export type LoggedCommand = { tick: number; cmd: Command };
  * Everything needed to resume a world exactly (save games). Plain JSON. Bump SAVE_VERSION whenever the shape of any
  * sim state type changes (Tower, Room, Unit, WorldMap, options...), so old saves are discarded instead of misread.
  */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 export type WorldSnapshot = {
   version: number;
   options: WorldOptions;
@@ -167,6 +168,7 @@ export class World {
       constructionSystem(t, DT);
       economySystem(t, DT, this.options.autoCollectRate);
     }
+    defenseSystem(this, DT);
     // Units act before production, so a unit never moves on the tick it is born.
     unitSystem(this, DT);
     exploreSystem(this);

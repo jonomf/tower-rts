@@ -37,6 +37,8 @@ export type Room = {
   deploy: Deploy | null;
   /** Production rooms: why no unit is in training right now (set each tick), or null if one is. */
   waiting: Waiting | null;
+  /** Defense rooms: seconds until the next shot. */
+  cooldown: number;
 };
 
 /** Why a production room isn't training: short of a resource, out of supply, or the tower is in Build posture. */

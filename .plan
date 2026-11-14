@@ -100,9 +100,10 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       "Raid from the left in 12 s" and marks the side on the strip.
 - [ ] Camps: small hostile towers from a preset layout (Core + 2–3 rooms, no production UI). Destroying one stops raids
       from it, grants loot, and lengthens the raid interval on that side.
-- [ ] Defense rooms: **Gun Nest** (anti-ground) and **Flak** (anti-air). Must be on an outer column of their floor.
+- [x] Defense rooms: **Gun Nest** (anti-ground) and **Flak** (anti-air). (Offered in Expedition only for now: the
+      Skirmish AI has no answer to turrets. The sim allows them anywhere.) Must be on an outer column of their floor.
       They shoot hostiles within range of that face. Numbers in `docs/expedition.md`.
-- [ ] Home tower for Expedition: Core in the middle (cols 2–3), `front: 'both'`.
+- [x] Home tower for Expedition: Core in the middle (cols 2–3), `front: 'both'`. (Done in P2.)
 - [ ] Balance tool: `npm run match -- --mode expedition --bot steady --n 100` runs a scripted player
       (an `AiController` on team 0 that also issues deploy orders) and prints: survival rate at 5/10/15 min, raids repelled,
       sectors explored. Target before the feel test: the bot survives to 10 min in 60–80% of seeds.
@@ -136,6 +137,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-14: P3 defense rooms (Gun Nest, Flak; systems/defense.ts). SAVE_VERSION 2
 - 2026-11-12: save games (World/AI snapshots, autosave, Continue). 64 tests
 - 2026-11-11: waiting-reason icons + Army/Build posture (Jono's feedback). 60 tests
 - 2026-11-11: P2 done: client (sector strip, fog curtain, site signs, Deploy/Send/Recall, mode picker). 58 tests

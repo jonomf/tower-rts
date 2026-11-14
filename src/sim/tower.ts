@@ -51,7 +51,23 @@ export function placementError(t: Tower, def: RoomId, col: number, floor: number
     if (floor > 0 && t.grid[floor - 1][c] == null) return 'Needs a room below it';
   }
   if (d.minFloor && floor < d.minFloor) return `${d.name} must be on floor ${d.minFloor + 1} or higher`;
+  if (d.turret && !openSidesAt(t, col, floor).length) return `${d.name} must be the outermost room on its floor`;
   return null;
+}
+
+/** The tower's front faces: where attackers are expected. */
+export const frontSides = (t: Tower): Side[] => (t.front === 'both' ? ['left', 'right'] : [t.front]);
+
+/** Front faces a cell has a clear line to: no room (rubble doesn't count) between it and that face on its floor. */
+export function openSidesAt(t: Tower, col: number, floor: number): Side[] {
+  return frontSides(t).filter((side) => {
+    const step = side === 'left' ? -1 : 1;
+    for (let c = col + step; c >= 0 && c < TOWER.cols; c += step) {
+      const r = roomAt(t, c, floor);
+      if (r && r.def !== 'rubble') return false;
+    }
+    return true;
+  });
 }
 
 /** What building `def` here costs: full price, or the rubble discount when rebuilding a destroyed cell. */
@@ -88,6 +104,7 @@ export function placeRoom(t: Tower, id: RoomInstId, def: RoomId, col: number, fl
     job: null,
     deploy: null,
     waiting: null,
+    cooldown: 0,
   };
   t.rooms.push(r);
   for (let c = col; c < col + d.width; c++) t.grid[floor][c] = id;
