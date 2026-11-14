@@ -2,7 +2,7 @@
  * Client state around the sim: time control, selection, placement mode, feedback.
  * Everything that changes the world goes through world.issue().
  */
-import { ROOMS, type Cost, type RoomId, type UnitId } from './sim/defs.ts';
+import { EXPEDITION_ONLY, ROOMS, type Cost, type RoomId, type UnitId } from './sim/defs.ts';
 import { groupOf, roomAt } from './sim/tower.ts';
 import { DT, SAVE_VERSION, World } from './sim/world.ts';
 import type { SavedGame } from './ui/save.ts';
@@ -83,7 +83,7 @@ export class Game {
     this.onStart();
     this.notify(
       expedition
-        ? 'Build up, then set a Barracks to Deploy Left or Right to explore.'
+        ? 'Raiders come at 2:30. Build Mines, a Barracks (it garrisons by default) and Gun Nests.'
         : script
           ? `${script.name} is building. Mines first, then a Barracks.`
           : 'Practice: raze the dummy tower.',
@@ -134,6 +134,15 @@ export class Game {
       } else if (e.kind === 'loot') {
         this.float(e.x * CELL_W, -CELL_H * 1.2, e.gained);
         this.notify(`Cache looted: +${Math.floor(e.gained.minerals)} minerals${e.gained.gas ? `, +${Math.floor(e.gained.gas)} gas` : ''}.`);
+      } else if (e.kind === 'warning') {
+        this.notify(`Raid from the ${e.side < 0 ? 'left' : 'right'} in ${e.seconds} s!`, 'error');
+      } else if (e.kind === 'raid') {
+        this.notify(`${e.size} raiders are marching in from the ${e.side < 0 ? 'left' : 'right'}.`, 'error');
+      } else if (e.kind === 'repelled') {
+        this.notify(`Raid repelled (${e.count} so far).`);
+      } else if (e.kind === 'campDestroyed') {
+        this.float(e.x * CELL_W, -CELL_H * 2.6, e.gained);
+        this.notify(`Camp destroyed: +${e.gained.minerals} minerals, and fewer raids from the ${e.x < 0 ? 'left' : 'right'}.`);
       }
     }
     if (this.time - this.lastAlert > 10 && w.effects.some((e) => e.kind === 'shot' && e.room?.x === this.tower.x && e.tick === w.tick - 1)) {
@@ -205,6 +214,7 @@ export class Game {
       if (res.ok) {
         this.selected = cell;
         this.placing = null;
+        this.hover = null;
       }
       return;
     }
@@ -264,6 +274,7 @@ export class Game {
   }
 
   togglePlacing(def: RoomId): void {
+    if (!this.world.map && EXPEDITION_ONLY.includes(def)) return;
     this.placing = this.placing === def ? null : def;
     if (this.placing) {
       this.selected = null;

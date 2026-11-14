@@ -1,6 +1,6 @@
 /** DOM HUD: top bar, build palette, selected-room panel, toasts, help. Rebuilt cheaply each frame via text diffing. */
-import { ECON, MERGE_MULT, PALETTE, ROOMS, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
-import { bufferCap, canAfford, coreOf, defaultDeploy, groupOf, mergeGroups, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
+import { ECON, EXPEDITION_ONLY, MERGE_MULT, PALETTE, ROOMS, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
+import { bufferCap, canAfford, coreOf, defaultDeploy, groupOf, mergeGroups, openSidesAt, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
 import { DEFAULT_MATCH, type Game, type GameMode, type MatchConfig } from '../game.ts';
 import { SCRIPTS } from '../ai/scripts.ts';
 import type { AiLevel } from '../ai/types.ts';
@@ -183,6 +183,7 @@ export class Hud {
     for (const [id, b] of this.buttons) {
       const d = ROOMS[id as keyof typeof ROOMS];
       b.classList.toggle('active', g.placing === id);
+      b.hidden = !g.world.map && EXPEDITION_ONLY.includes(id as keyof typeof ROOMS);
       b.classList.toggle('poor', !canAfford(t.bank, d.cost));
     }
 
@@ -208,9 +209,12 @@ export class Hud {
     const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const won = w.winner === this.game.team;
     $('#gameover-title').textContent = won ? 'Victory! Enemy Core destroyed' : 'Defeat: your Core fell';
+    const d = w.director;
     $('#gameover-detail').textContent = won
       ? `Took ${time}. Core HP left: ${Math.ceil(coreOf(this.game.tower)?.hp ?? 0)}.`
-      : `You held out for ${time}.`;
+      : d && w.map
+        ? `You held out for ${time}. Raids repelled: ${d.repelled}. Sectors explored: ${w.map.explored.filter(Boolean).length} of ${w.map.sites.length}.`
+        : `You held out for ${time}.`;
     this.gameover.classList.toggle('won', won);
     clearSave(); // a finished match isn't resumable
     this.gameover.classList.add('open');
@@ -265,7 +269,7 @@ export class Hud {
       <div class="ctrl">
         <p><i class="s">☗</i> Supply ${used} / ${max}</p>
         <p>Army: ${army}${exp ? ` <span class="dim">(${home} home, ${out} out)</span>` : ''}</p>
-        ${exp ? `<p>Explored: ${explored} / ${g.world.map!.sites.length} sectors</p>` : ''}
+        ${exp ? `<p>Explored ${explored}/${g.world.map!.sites.length} · Raids repelled ${g.world.director?.repelled ?? 0}</p>` : ''}
         <p class="hint">${hint}</p>
       </div>`;
     // Buttons are built once per layout and only enabled/disabled after that (never rebuilt on a timer).
@@ -312,6 +316,10 @@ export class Hud {
       lines.push(`+${Math.floor(d.supply * MERGE_MULT[group.length])} supply${group.length > 1 ? ` (merged ×${group.length})` : ''}`);
     } else if (r.def === 'core') {
       lines.push(`HP ${Math.ceil(r.hp)} / ${d.hp} · +${ECON.coreRate.minerals} minerals/s`);
+    } else if (d.turret) {
+      const open = openSidesAt(g.tower, r.col, r.floor);
+      lines.push(`Hits ${d.turret.hitsAir ? 'air' : 'ground'} units within ${d.turret.range} cells · ${Math.round(d.turret.damage / d.turret.cooldown)} dmg/s`);
+      lines.push(open.length ? `Covers: ${open.join(' and ')}` : '<span class="why">Blocked: a room stands between it and the edge</span>');
     }
     let trainHtml = '';
     let deployHtml = '';

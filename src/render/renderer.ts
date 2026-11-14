@@ -3,7 +3,7 @@ import { MAP, MERGE_MULT, ROOMS, TOWER, UNITS, type SiteKind } from '../sim/defs
 import { mapSpan, sectorCenter, sectorOf } from '../sim/map.ts';
 import { visibleSectors } from '../sim/systems/explore.ts';
 import type { Waiting, WorldMap } from '../sim/types.ts';
-import { bufferCap, canAfford, buildCost, mergeGroups, placementError, roomAt, roomRate } from '../sim/tower.ts';
+import { bufferCap, canAfford, buildCost, mergeGroups, openSidesAt, placementError, roomAt, roomRate } from '../sim/tower.ts';
 import type { Room, Tower, Unit } from '../sim/types.ts';
 import { DT } from '../sim/world.ts';
 import type { Game } from '../game.ts';
@@ -87,7 +87,10 @@ export class Renderer {
     this.vis = visibleSectors(game.world);
     this.ground(game);
     if (game.world.map) this.sites(game.world.map);
-    for (const t of game.world.towers) if (t) this.tower(game, t);
+    for (const t of game.world.towers) {
+      if (t.kind === 'camp') this.camp(game, t);
+      else this.tower(game, t);
+    }
     this.placement(game);
     this.selection(game);
     this.units(game);
@@ -195,6 +198,36 @@ export class Renderer {
     }
   }
 
+  /** A raider camp: a low palisade around its rooms. Hidden until its sector's site is discovered. */
+  private camp(game: Game, t: Tower): void {
+    const m = game.world.map;
+    const site = m?.sites[sectorOf(t.x + TOWER.cols / 2) + m.radius];
+    if (m && !site?.discovered) return;
+    const { ctx } = this;
+    const x0 = (t.x + 1) * CELL_W, w = 4 * CELL_W, h = 2 * CELL_H;
+    ctx.fillStyle = '#3a2a2a';
+    ctx.fillRect(x0 - 8, -h - 8, w + 16, h + 8);
+    ctx.fillStyle = '#1c1416';
+    ctx.fillRect(x0, -h, w, h);
+    // Palisade stakes along the top, and a raider flag.
+    ctx.fillStyle = '#5a3d33';
+    for (let x = x0 - 8; x < x0 + w + 8; x += 16) {
+      ctx.beginPath();
+      ctx.moveTo(x, -h - 8);
+      ctx.lineTo(x + 8, -h - 24);
+      ctx.lineTo(x + 16, -h - 8);
+      ctx.fill();
+    }
+    ctx.fillStyle = TEAM_COLOR[1];
+    ctx.fillRect(x0 + w / 2 - 1.5, -h - 64, 3, 44);
+    ctx.fillRect(x0 + w / 2, -h - 64, 26, 16);
+    for (const g of mergeGroups(t)) {
+      const first = g[0];
+      const last = g[g.length - 1];
+      this.room(game, t, g, inset(cellRect(first.col, first.floor, last.col + last.w - first.col, t.x), 3));
+    }
+  }
+
   private room(game: Game, t: Tower, group: Room[], r: Rect): void {
     const { ctx } = this;
     const room = group[0];
@@ -271,6 +304,21 @@ export class Renderer {
         this.bubble(game, r.x + r.w / 2, r.y - 4, RES_ICON[p.res], RES_COLOR[p.res], fill >= 0.999);
     }
     if (def.supply) this.label(`+${Math.floor(def.supply * MERGE_MULT[group.length])} supply`, r.x + r.w / 2, r.y + r.h * 0.64, r.w, 'rgba(255,255,255,0.7)', 0.75);
+    if (def.turret) {
+      const open = openSidesAt(t, room.col, room.floor);
+      const cx = r.x + r.w / 2, cy = r.y + r.h * 0.66;
+      if (!open.length) this.label('blocked', cx, cy, r.w, '#ff8f8f', 0.75);
+      else {
+        // A barrel toward each face it covers.
+        ctx.strokeStyle = '#e6e6e6';
+        ctx.lineWidth = 4;
+        for (const side of open) line(ctx, cx, cy, cx + (side === 'left' ? -1 : 1) * r.w * 0.36, cy - (def.turret.hitsAir ? 10 : 0));
+        ctx.fillStyle = '#e6e6e6';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     if (def.trains) {
       if (room.job) {
         const u = UNITS[room.job.unit];
@@ -320,7 +368,8 @@ export class Renderer {
       if (!site.discovered || site.kind === 'home' || site.kind === 'empty') continue;
       const look = SITE_ICON[site.kind];
       const x = sectorCenter(site.sector) * CELL_W;
-      const done = site.kind === 'cache' && site.claimed;
+      if (site.kind === 'camp' && !site.claimed) continue; // the camp itself is drawn there
+      const done = (site.kind === 'cache' || site.kind === 'camp') && site.claimed;
       ctx.globalAlpha = done ? 0.35 : 1;
       // A post with a sign.
       ctx.fillStyle = '#4a3b30';
@@ -334,7 +383,7 @@ export class Renderer {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = look.color;
-      ctx.fillText(`${look.icon} ${done ? 'Looted' : look.label}`, x, -130, 130);
+      ctx.fillText(`${look.icon} ${done ? (site.kind === 'camp' ? 'Camp destroyed' : 'Looted') : look.label}`, x, -130, 130);
       if (site.kind === 'cache' && !done) {
         ctx.fillStyle = '#8a6a2e';
         ctx.fillRect(x - 22, -26, 44, 26);
@@ -604,7 +653,7 @@ export class Renderer {
       }
       if (site.discovered && site.kind !== 'empty') {
         const look = SITE_ICON[site.kind];
-        ctx.globalAlpha = site.kind === 'cache' && site.claimed ? 0.35 : 1;
+        ctx.globalAlpha = (site.kind === 'cache' || site.kind === 'camp') && site.claimed ? 0.35 : 1;
         ctx.fillStyle = look.color;
         ctx.font = `700 ${Math.min(16, cw * 0.55)}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
@@ -617,6 +666,18 @@ export class Renderer {
         ctx.lineWidth = 1.5;
         ctx.strokeRect(x + 1.5, y0 + 0.5, cw - 3, h - 1);
       }
+    }
+    // A raid has been called: flash an arrow at the end it will come from.
+    const d = game.world.director;
+    if (d?.warned && Math.sin(game.time * 8) > -0.3) {
+      const ax = d.side === -1 ? x0 - 4 : x0 + w + 4;
+      ctx.fillStyle = '#ff5d5d';
+      ctx.beginPath();
+      ctx.moveTo(ax, y0 + h / 2 - 9);
+      ctx.lineTo(ax - d.side * 12, y0 + h / 2);
+      ctx.lineTo(ax, y0 + h / 2 + 9);
+      ctx.fill();
+      ctx.fillRect(d.side === -1 ? x0 - 4 : x0 + w, y0 - 4, 4, h + 8);
     }
     // Units: yours always, hostiles only where you can see.
     for (const u of game.world.units) {
