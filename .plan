@@ -144,13 +144,10 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
 - [x] Client: locked palette buttons and train buttons say what they need; new units and rooms drawn; a **Tech** sheet
       (top bar button, key T; `src/ui/techtree.ts`) draws the tree from the data, lit up as you unlock it. Tiers run
       top to bottom, or left to right on a landscape phone. Verified at all three sizes.
-- [ ] More bases. **Open question for Jono (asked 2026-11-15), proposal:** an **Outpost** you found in any explored
-      sector that has no tower (empty, looted cache, ruin, or a camp you destroyed). Cost 300 minerals, paid from home;
-      a garrison unit must be standing there. It is a second full tower (small Core, 600 hp) that you build in like
-      home: tap its sector on the strip to go there. One shared bank, supply and tech tree across your towers.
-      Raids pick the nearer of your towers on their side. Losing an Outpost loses its rooms, not the run; losing
-      the home Core still ends it. Alternatives: (a) smaller fixed-size outposts (2 floors); (b) separate banks per
-      tower with convoys. Needs: `game.tower` → the tower in view, commands already take a tower id, SAVE bump.
+- [x] Don't end the game on a win (Jono, 2026-11-15): the victory sheet offers **Keep playing / End: new run / End: menu**.
+      `keepPlaying` command; the fallen Stronghold turns to rubble; `world.victoryAt` keeps the win (score is timed to
+      it). Losing the home Core afterwards still ends the run. A won run stays in the save until ended. SAVE_VERSION 7.
+- [ ] More bases and the 2-D map: see P6.
 - Later candidates: "rush" a room for instant output at a risk · crew assigned to rooms with stats (old Q2) ·
   room upgrades (levels) · incidents inside the tower (fire, breach) · raiders that use the new units.
 
@@ -165,8 +162,27 @@ Answered 2026-11-14: "dig it, go P4". No changes requested; the detailed questio
 - [ ] Is exploring rewarding? What did you want to find out there?
 - [ ] Which P5 candidate first?
 
+## P6: the country map (Jono, 2026-11-15: "we should be able to make multiple tower bases" and "we want a full 2D map,
+## not just left/right. Stuff to find scattered around.") This replaces E1 (strip) and softens E2 (winning no longer ends).
+Proposal, **waiting for Jono's answer on M1** before any code:
+- M1 Shape (the open question): keep the side view. The map becomes a **grid of sectors** (about 9 wide x 7 deep, home in
+  the middle). Every row is an east-west road drawn side-on exactly as now; every sector also has a path north and
+  south. You look at one sector row at a time; a **Map sheet** (the 2-D grid with fog) replaces the sector strip and
+  is how you move the view and send squads. Alternative: a true top-down world (new renderer, towers become icons).
+- M2 Sim: towers, units and sites get a `row`. Units fight only within their row; changing row happens at a sector's
+  centre and takes a few seconds. Orders become "go to sector (col,row)" with shortest-path steps (replaces Left/Right).
+- M3 Stuff to find: caches, ruins, camps, the Trader, the Stronghold scattered over the grid by distance from home,
+  plus new finds (survivors = free units, blueprints = a free tech unlock, mineral fields that boost an Outpost).
+- M4 Bases: found an **Outpost** (300 minerals, a unit standing there) in any explored sector with no tower. A full
+  tower with a small Core. Shared bank, supply and tech. Any number of them. Raids go for your nearest tower.
+  Losing an Outpost loses its rooms; losing the home Core ends the run.
+- M5 Client: `game.tower` becomes the tower in view; Map sheet; Send-to-sector; summary lists all your towers.
+- M6 Bot and balance: the homesteader bot explores the grid and founds one Outpost; re-run the 40-map table.
+Order: M2 (rows in the sim, 1 row = today's game, all tests green) -> M5 map sheet -> M3 -> M4 -> M6.
+
 ---
 Log
+- 2026-11-15: win no longer ends the run (Keep playing). P6 (2-D map + Outposts) proposed, waiting on Jono. 92 tests
 - 2026-11-15: P5 tech tree client: locks in palette and room panel, Tech sheet, new unit shapes. Palette is 12 rooms
 - 2026-11-15: P5 tech tree (sim): requires, 4 rooms, 4 units. SAVE_VERSION 6. 91 tests. Steady bot 40%, Sharp 85%
 - 2026-11-14: P4 done: client (Stronghold AI, hidden towers, Trade buttons), run summary + best run, Expedition default. 84 tests

@@ -52,3 +52,31 @@ test('destroying the Stronghold\'s Core wins the run', () => {
   w.damageRoom(sh, coreOf(sh)!, 1e9);
   assert.equal(w.winner, 0);
 });
+
+test('after the win the player can keep playing: the game resumes, the win stays recorded, a later loss still ends it', () => {
+  const w = new World({ seed: 5, mode: 'expedition' });
+  assert.equal(w.issue({ type: 'keepPlaying', team: 0 }).ok, false, 'nothing to continue before a win');
+  for (let i = 0; i < 20 * 20; i++) w.step();
+  const sh = w.tower(1);
+  w.spawnUnit('trooper', 1, 0, sh, 'home');
+  w.damageRoom(sh, sh.rooms.find((r) => r.def === 'core')!, 1e9);
+  assert.equal(w.winner, 0);
+  assert.equal(w.victoryAt, 20);
+  const tick = w.tick;
+  w.step();
+  assert.equal(w.tick, tick, 'the world is frozen while the choice is open');
+
+  assert.ok(w.issue({ type: 'keepPlaying', team: 0 }).ok);
+  assert.equal(w.winner, null);
+  assert.ok(sh.rooms.every((r) => r.def === 'rubble'), 'the Stronghold is rubble');
+  assert.equal(w.issue({ type: 'build', team: 1, room: 'mine', col: 0, floor: 0 }).ok, false, 'and cannot rebuild');
+  for (let i = 0; i < 20 * 10; i++) w.step();
+  assert.equal(w.tick, tick + 200);
+  assert.ok(!w.units.some((u) => u.home === sh.id), 'its units are gone');
+  assert.equal(w.victoryAt, 20);
+
+  const home = w.tower(0);
+  w.damageRoom(home, home.rooms.find((r) => r.def === 'core')!, 1e9);
+  assert.equal(w.winner, 1, 'losing the home Core still ends the run');
+  assert.equal(w.victoryAt, 20);
+});

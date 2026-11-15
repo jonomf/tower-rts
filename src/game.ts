@@ -92,9 +92,19 @@ export class Game {
     );
   }
 
+  /** Expedition, Stronghold destroyed: the player may end the run here or play on. */
+  get canKeepPlaying(): boolean {
+    return !!this.world.map && this.world.winner === this.team;
+  }
+
+  keepPlaying(): void {
+    if (this.issue({ type: 'keepPlaying', team: this.team }).ok) this.notify('The Stronghold is rubble. The country is yours to explore; raiders still roam.');
+  }
+
   /** The current match as a save game, or null when there is nothing worth resuming. */
   toSave(): SavedGame | null {
-    if (!this.started || this.world.winner !== null) return null;
+    // A won Expedition stays resumable: the keep-playing choice is still open.
+    if (!this.started || (this.world.winner !== null && !this.canKeepPlaying)) return null;
     return {
       version: SAVE_VERSION,
       savedAt: Date.now(),

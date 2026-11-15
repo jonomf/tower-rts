@@ -168,6 +168,8 @@ export type Command =
   /** Sell minerals for gas, or gas for minerals, at the Trader's current rate (once met). */
   | { type: 'trade'; team: Team; sell: 'minerals' | 'gas' }
   | { type: 'recall'; team: Team }
+  /** Expedition: the winner chooses to keep playing after the Stronghold has fallen. */
+  | { type: 'keepPlaying'; team: Team }
   /** Every garrisoned unit of the team marches out in `dir`. */
   | { type: 'sendGarrison'; team: Team; dir: 1 | -1 };
 

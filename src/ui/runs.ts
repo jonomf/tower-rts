@@ -8,8 +8,9 @@ export type RunStats = { won: boolean; seconds: number; explored: number; repell
 /** Score: sectors x100 + raids repelled x50 + camps x200 + 1000 for a win - seconds played (docs/expedition.md). */
 export function runStats(w: World): RunStats {
   const d = w.director;
-  const won = w.winner === 0;
-  const seconds = Math.floor(w.seconds);
+  const won = w.winner === 0 || w.victoryAt !== null;
+  // A run that was won is timed to the win, however long the player kept going afterwards.
+  const seconds = Math.floor(w.victoryAt ?? w.seconds);
   const explored = w.map ? w.map.explored.filter(Boolean).length : 0;
   const repelled = d?.repelled ?? 0;
   const camps = d ? d.campsDown.left + d.campsDown.right : 0;

@@ -55,7 +55,7 @@ export type LoggedCommand = { tick: number; cmd: Command };
  * Everything needed to resume a world exactly (save games). Plain JSON. Bump SAVE_VERSION whenever the shape of any
  * sim state type changes (Tower, Room, Unit, WorldMap, options...), so old saves are discarded instead of misread.
  */
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 export type WorldSnapshot = {
   version: number;
   options: WorldOptions;
@@ -68,6 +68,7 @@ export type WorldSnapshot = {
   director: Director | null;
   trade: Trade | null;
   winner: Team | null;
+  victoryAt: number | null;
   commandLog: LoggedCommand[];
 };
 
@@ -92,6 +93,8 @@ export class World {
   effects: Effect[] = [];
   /** Set when a Core falls; the sim freezes. */
   winner: Team | null = null;
+  /** Expedition: when the player won (seconds), kept after they choose to keep playing. Null until then. */
+  victoryAt: number | null = null;
   /** Every accepted command and the tick it was applied on (replays, lockstep later). */
   readonly commandLog: LoggedCommand[] = [];
   private nextId = 1;
@@ -132,6 +135,7 @@ export class World {
       director: this.director,
       trade: this.trade,
       winner: this.winner,
+      victoryAt: this.victoryAt,
       commandLog: this.commandLog,
     });
   }
@@ -151,6 +155,7 @@ export class World {
     w.trade = s.trade;
     w.units = s.units;
     w.winner = s.winner;
+    w.victoryAt = s.victoryAt;
     w.commandLog.splice(0, w.commandLog.length, ...s.commandLog);
     return w;
   }
@@ -315,6 +320,23 @@ export class World {
   }
 
   /** Damage a room; at 0 hp it becomes rubble, and a fallen Core ends the game. A team's number means its home tower. */
+  /**
+   * Expedition: after winning, play on. The fallen Stronghold's remaining rooms collapse to rubble and its units
+   * scatter; raids, camps and the rest of the map carry on. The win stays recorded in `victoryAt`.
+   */
+  keepPlaying(): void {
+    this.winner = null;
+    for (const t of this.towers) {
+      if (t.team !== 1 || t.kind !== 'main') continue;
+      for (const r of [...t.rooms]) {
+        if (r.def === 'rubble') continue;
+        removeRoom(t, r);
+        placeRoom(t, this.newId(), 'rubble', r.col, r.floor, true);
+      }
+      for (const u of this.units) if (u.home === t.id) u.hp = 0;
+    }
+  }
+
   damageRoom(of: Team | Tower, room: Room, amount: number): void {
     const t = typeof of === 'number' ? this.tower(of) : of;
     if (room.hp <= 0) return;
@@ -328,6 +350,7 @@ export class World {
       const winner = opponent(t.team);
       if (winner !== null) {
         this.winner = winner;
+        if (winner === 0 && this.map && this.victoryAt === null) this.victoryAt = this.seconds;
         return;
       }
     }
@@ -369,6 +392,7 @@ export class World {
         director: this.director,
         trade: this.trade,
         winner: this.winner,
+        victoryAt: this.victoryAt,
       }),
     );
   }

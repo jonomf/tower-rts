@@ -118,7 +118,7 @@ onResize();
 function autosave(): void {
   const s = game.toSave();
   if (s) writeSave(s);
-  else if (game.started && game.world.winner !== null) clearSave();
+  else if (game.started && game.world.winner !== null && !game.canKeepPlaying) clearSave();
 }
 setInterval(autosave, 5000);
 document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && autosave());

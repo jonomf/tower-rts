@@ -213,7 +213,9 @@ i.s { color: var(--s); }
 #gameover .sheet { text-align: center; background: #1b1e2e; border: 1px solid var(--ui-line); border-radius: 16px; padding: 18px 26px; }
 #gameover.won .sheet { border-color: var(--accent); }
 #gameover h2 { margin: 0 0 6px; }
-#gameover .acts { display: flex; justify-content: center; margin-top: 12px; }
+#gameover .acts { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+#keep-playing { border-color: var(--accent); color: var(--accent); }
+#keep-playing[hidden] { display: none; }
 #gameover-stats { margin: 10px auto 0; min-width: 230px; text-align: left; font-size: 14px; }
 #gameover-stats[hidden] { display: none; }
 #gameover-stats div { display: flex; justify-content: space-between; gap: 24px; padding: 3px 0; border-bottom: 1px solid var(--ui-line); }

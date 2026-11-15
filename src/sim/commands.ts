@@ -28,9 +28,15 @@ export function applyCommand(w: World, cmd: Command): CommandResult {
     home.bank.minerals += offer.minerals;
     return { ok: true, gained: { minerals: offer.minerals, gas: 0 } };
   }
+  if (cmd.type === 'keepPlaying') {
+    if (!w.map || w.winner !== cmd.team || cmd.team !== 0) return fail('Nothing to continue');
+    w.keepPlaying();
+    return { ok: true };
+  }
   const t = cmd.tower == null ? w.towers.find((x) => x.team === cmd.team && x.kind === 'main') : w.towerById(cmd.tower);
   if (!t) return fail(cmd.tower == null ? 'No such team' : 'No such tower');
   if (t.team !== cmd.team) return fail('Not your tower');
+  if (t.kind === 'main' && !t.rooms.some((r) => r.def === 'core')) return fail('That tower has fallen');
 
   switch (cmd.type) {
     case 'build': {

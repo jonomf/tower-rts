@@ -76,7 +76,9 @@ export class Hud {
       this.panelKey = '';
     });
     $('#again').addEventListener('click', () => game.start());
+    $('#keep-playing').addEventListener('click', () => game.keepPlaying());
     $('#to-menu').addEventListener('click', () => {
+      clearSave(); // ending a won run here: nothing left to continue
       this.gameover.classList.remove('open');
       this.openMenu();
     });
@@ -235,8 +237,13 @@ export class Hud {
       // Expedition: the run summary, and the best run so far (kept in this browser).
       const run = runStats(w);
       const { best, isBest } = recordRun(run);
-      $('#gameover-title').textContent = won ? 'Victory! The Stronghold has fallen' : 'Defeat: your Core fell';
-      $('#gameover-detail').textContent = won ? `You won in ${time}.` : `You held out for ${time}.`;
+      const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t) % 60).padStart(2, '0')}`;
+      $('#gameover-title').textContent = won ? 'Victory! The Stronghold has fallen' : run.won ? 'Your Core fell (after your victory)' : 'Defeat: your Core fell';
+      $('#gameover-detail').textContent = won
+        ? `You won in ${time}. End the run here, or keep playing on this map.`
+        : run.won
+          ? `You won at ${mmss(w.victoryAt!)} and played on until ${time}.`
+          : `You held out for ${time}.`;
       const row = (k: string, v: string | number) => `<div><span>${k}</span><b>${v}</b></div>`;
       stats.innerHTML =
         row('Sectors explored', `${run.explored} / ${w.map.sites.length}`) +
@@ -246,8 +253,8 @@ export class Hud {
         row('Score', run.score) +
         `<div class="best"><span>${isBest ? 'New best!' : 'Best score'}</span><b>${best.score}</b></div>`;
       stats.hidden = false;
-      set($('#again'), 'New run');
-      set($('#to-menu'), 'Menu');
+      set($('#again'), won ? 'End: new run' : 'New run');
+      set($('#to-menu'), won ? 'End: menu' : 'Menu');
     } else {
       $('#gameover-title').textContent = won ? 'Victory! Enemy Core destroyed' : 'Defeat: your Core fell';
       $('#gameover-detail').textContent = won ? `Took ${time}. Core HP left: ${Math.ceil(coreOf(this.game.tower)?.hp ?? 0)}.` : `You held out for ${time}.`;
@@ -255,8 +262,9 @@ export class Hud {
       set($('#again'), 'Rematch');
       set($('#to-menu'), 'Change opponent');
     }
-    this.gameover.classList.toggle('won', won);
-    clearSave(); // a finished match isn't resumable
+    this.gameover.classList.toggle('won', won || (!!w.map && w.victoryAt !== null));
+    $('#keep-playing').hidden = !this.game.canKeepPlaying;
+    if (!this.game.canKeepPlaying) clearSave(); // a finished match isn't resumable
     this.gameover.classList.add('open');
   }
 

@@ -104,6 +104,6 @@ After UI changes: `npm run build`, serve `dist/`, and drive it with Playwright (
 check for console errors. Look at every screenshot.
 
 ## Gates
-P5 (tech tree, then more bases) is in progress. The Outpost design in `.plan` needs Jono's yes before it is built.
+P6 (the 2-D country map and Outposts) is proposed in `.plan`; M1 (the map's shape) needs Jono's answer before any code.
 New rooms and units: add the catalog entry (with `requires`), a row in `DESIGN.md`, and a case in `tests/tech.test.ts`;
 the palette, the Tech sheet and the train buttons pick it up from the data. Tests that aren't about tech use `freeTech: true`.

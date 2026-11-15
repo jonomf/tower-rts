@@ -115,7 +115,8 @@ Levels: Relaxed never taps (40% producer income); Steady taps every 90 s (about 
   found it builds three Barracks and sends Troopers at you (AI difficulty from the menu). No Gun Nest.
 - **Trader**: a neutral post nobody attacks. The first unit to reach it brings home 150 ◆ and 50 ▲ and unlocks trading
   from the tower summary: 100 ◆ → about 40 ▲, or 50 ▲ → about 80 ◆ (the rate drifts ±20% each minute).
-- You win by destroying the Stronghold's Core and lose when your Core falls. No overtime. The game-over sheet shows the
+- You win by destroying the Stronghold's Core and lose when your Core falls. No overtime. A win doesn't end the run:
+  the sheet offers **Keep playing** (the Stronghold turns to rubble; raids and the rest of the map carry on) or End. The game-over sheet shows the
   run summary (time, sectors, raids repelled, camps, rooms built, score) and your best score in this browser.
 
 ## Save games
