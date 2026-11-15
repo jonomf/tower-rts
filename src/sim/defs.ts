@@ -6,7 +6,7 @@
 export type Res = 'minerals' | 'gas';
 export type Cost = { minerals: number; gas: number };
 
-export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'barracks' | 'hangar' | 'wall' | 'gunNest' | 'flak' | 'rubble' | 'campCore';
+export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'barracks' | 'hangar' | 'wall' | 'gunNest' | 'flak' | 'rubble' | 'campCore' | 'market';
 export type UnitId = 'trooper' | 'bruiser' | 'flyer';
 
 export type RoomDef = {
@@ -166,6 +166,18 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     buildable: false,
     color: '#8a2b2b',
     blurb: 'The heart of a raider camp. Destroy it and the camp is gone.',
+  },
+  market: {
+    id: 'market',
+    name: 'Trader',
+    width: 2,
+    cost: { minerals: 0, gas: 0 },
+    buildTime: 0,
+    hp: 600,
+    mergeable: false,
+    buildable: false,
+    color: '#b8922e',
+    blurb: 'A neutral trading post.',
   },
   rubble: {
     id: 'rubble',
@@ -357,5 +369,25 @@ export const RAIDS = {
 /** A raider camp, columns left to right, bottom floor first. Its Core is 2 wide. */
 export const CAMP_LAYOUT: (RoomId | null)[][] = [
   [null, 'wall', 'campCore', null, 'wall', null],
+  [null, null, 'quarters', 'quarters', null, null],
+];
+
+/** The Trader (Expedition): met when a player unit comes within `reach` cells of its centre. */
+export const TRADE = {
+  reach: 4,
+  gift: { minerals: 150, gas: 50 } as Cost,
+  /** Sell `mineralsIn` minerals for `gasOut` gas, or `gasIn` gas for `mineralsOut` minerals, times the current rate. */
+  mineralsIn: 100,
+  gasOut: 40,
+  gasIn: 50,
+  mineralsOut: 80,
+  /** The rate is redrawn in [1 - swing, 1 + swing] every `every` seconds. */
+  swing: 0.2,
+  every: 60,
+};
+
+/** The trading post, columns left to right, bottom floor first. */
+export const TRADER_LAYOUT: (RoomId | null)[][] = [
+  [null, 'refinery', 'market', null, 'mine', null],
   [null, null, 'quarters', 'quarters', null, null],
 ];

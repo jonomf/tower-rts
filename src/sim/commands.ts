@@ -1,5 +1,6 @@
 /** The only way to change the world. Player input, AI and (later) the network all come through here. */
-import { ECON, ROOMS, UNITS, type Cost } from './defs.ts';
+import { ECON, ROOMS, TRADE, UNITS, type Cost } from './defs.ts';
+import { tradeOffer } from './systems/explore.ts';
 import { buildCost, canAfford, defaultDeploy, groupOf, placeRoom, placementError, removalError, removeRoom, roomAt } from './tower.ts';
 import type { Command, CommandResult, Room } from './types.ts';
 import type { World } from './world.ts';
@@ -11,6 +12,21 @@ const jobRefund = (r: Room): Cost => (r.job ? { ...UNITS[r.job.unit].cost } : { 
 
 export function applyCommand(w: World, cmd: Command): CommandResult {
   if (cmd.type === 'recall' || cmd.type === 'sendGarrison') return orderUnits(w, cmd);
+  if (cmd.type === 'trade') {
+    const home = w.towers.find((x) => x.team === cmd.team && x.kind === 'main');
+    if (!home || !w.trade?.unlocked) return fail('Find the Trader first');
+    const offer = tradeOffer(w.trade.rate);
+    if (cmd.sell === 'minerals') {
+      if (home.bank.minerals < TRADE.mineralsIn) return fail('Not enough minerals');
+      home.bank.minerals -= TRADE.mineralsIn;
+      home.bank.gas += offer.gas;
+      return { ok: true, gained: { minerals: 0, gas: offer.gas } };
+    }
+    if (home.bank.gas < TRADE.gasIn) return fail('Not enough gas');
+    home.bank.gas -= TRADE.gasIn;
+    home.bank.minerals += offer.minerals;
+    return { ok: true, gained: { minerals: offer.minerals, gas: 0 } };
+  }
   const t = cmd.tower == null ? w.towers.find((x) => x.team === cmd.team && x.kind === 'main') : w.towerById(cmd.tower);
   if (!t) return fail(cmd.tower == null ? 'No such team' : 'No such tower');
   if (t.team !== cmd.team) return fail('Not your tower');

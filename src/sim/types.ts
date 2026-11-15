@@ -128,6 +128,7 @@ export type Effect =
   /** Expedition: a cache was looted at axis position x. */
   | { kind: 'loot'; tick: number; x: number; gained: Cost }
   /** Expedition: a raid will launch from `side` in `seconds`. */
+  | { kind: 'traderMet'; tick: number; x: number; gained: Cost }
   | { kind: 'warning'; tick: number; side: -1 | 1; seconds: number }
   | { kind: 'raid'; tick: number; side: -1 | 1; size: number }
   | { kind: 'repelled'; tick: number; count: number }
@@ -141,8 +142,8 @@ export type Tower = {
   /** Leftmost column of the Core (on floor 0). */
   coreCol: number;
   front: Front;
-  /** main: a full tower with a Core. camp: a small raider camp (Expedition); destroyed with its campCore. */
-  kind: 'main' | 'camp';
+  /** main: a full tower with a Core. camp: a small raider camp (Expedition); destroyed with its campCore. trader: the neutral trading post. */
+  kind: 'main' | 'camp' | 'trader';
   posture: Posture;
   bank: Cost;
   rooms: Room[];
@@ -164,6 +165,8 @@ export type Command =
   | (TowerRef & { type: 'setDeploy'; col: number; floor: number; deploy: Deploy })
   | (TowerRef & { type: 'setPosture'; posture: Posture })
   /** Every unit of the team that has a home tower goes back to garrison it. */
+  /** Sell minerals for gas, or gas for minerals, at the Trader's current rate (once met). */
+  | { type: 'trade'; team: Team; sell: 'minerals' | 'gas' }
   | { type: 'recall'; team: Team }
   /** Every garrisoned unit of the team marches out in `dir`. */
   | { type: 'sendGarrison'; team: Team; dir: 1 | -1 };
@@ -189,3 +192,6 @@ export type WorldMap = {
   /** Terrain seen at least once (fog lifted). */
   explored: boolean[];
 };
+
+/** Trading state (Expedition). `rate` multiplies what a sale pays out. */
+export type Trade = { unlocked: boolean; rate: number; nextDrift: number };

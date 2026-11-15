@@ -1,15 +1,15 @@
-import { CAMP_LAYOUT, ECON, LANE, OVERTIME, RAIDS, TOWER, UNITS, type UnitId } from './defs.ts';
+import { CAMP_LAYOUT, ECON, LANE, OVERTIME, RAIDS, TOWER, TRADER_LAYOUT, UNITS, type RoomId, type UnitId } from './defs.ts';
 import { applyCommand } from './commands.ts';
 import { Rng, fnv1a } from './rng.ts';
 import { constructionSystem, economySystem } from './systems/economy.ts';
 import { productionSystem } from './systems/production.ts';
 import { unitSystem } from './systems/units.ts';
-import { exploreSystem } from './systems/explore.ts';
+import { exploreSystem, tradeSystem } from './systems/explore.ts';
 import { defenseSystem } from './systems/defense.ts';
 import { buildScenario, type ScenarioId } from './scenario.ts';
 import { generateMap, sectorCenter, sectorOf, siteAt } from './map.ts';
 import { createDirector, directorSystem } from './systems/director.ts';
-import type { Director } from './types.ts';
+import type { Director, Trade } from './types.ts';
 import { coreOf, createTower, exitSide, faceOf, placeRoom, removeRoom, type TowerPlacement } from './tower.ts';
 import type { Deploy } from './types.ts';
 import { opponent, type Command, type CommandResult, type Effect, type Room, type Team, type Tower, type TowerId, type Unit, type WorldMap } from './types.ts';
@@ -53,7 +53,7 @@ export type LoggedCommand = { tick: number; cmd: Command };
  * Everything needed to resume a world exactly (save games). Plain JSON. Bump SAVE_VERSION whenever the shape of any
  * sim state type changes (Tower, Room, Unit, WorldMap, options...), so old saves are discarded instead of misread.
  */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 export type WorldSnapshot = {
   version: number;
   options: WorldOptions;
@@ -64,6 +64,7 @@ export type WorldSnapshot = {
   units: Unit[];
   map: WorldMap | null;
   director: Director | null;
+  trade: Trade | null;
   winner: Team | null;
   commandLog: LoggedCommand[];
 };
@@ -82,6 +83,8 @@ export class World {
   readonly map: WorldMap | null = null;
   /** Expedition only: the raid schedule. */
   director: Director | null = null;
+  /** Expedition only: trading with the Trader. */
+  trade: Trade | null = null;
   units: Unit[] = [];
   /** Render-only events (shots, deaths, destroyed rooms). Not part of the hash. */
   effects: Effect[] = [];
@@ -100,6 +103,7 @@ export class World {
       this.map = generateMap(this.options.seed);
       for (const site of this.map.sites) {
         if (site.kind === 'camp') this.addCamp(site.sector);
+        if (site.kind === 'trader') this.addSmall(2, 'trader', site.sector, TRADER_LAYOUT);
         // The Stronghold: a full hostile tower facing home, Core at its back. An AiController runs it (see Game).
         if (site.kind === 'stronghold') {
           const right = site.sector > 0;
@@ -107,6 +111,7 @@ export class World {
         }
       }
       this.director = createDirector(this);
+      this.trade = { unlocked: false, rate: 1, nextDrift: 0 };
     } else for (const team of this.options.teams) this.addTower(team, skirmishPlacement(team));
     buildScenario(this, this.options.scenario);
   }
@@ -123,6 +128,7 @@ export class World {
       units: this.units,
       map: this.map,
       director: this.director,
+      trade: this.trade,
       winner: this.winner,
       commandLog: this.commandLog,
     });
@@ -140,6 +146,7 @@ export class World {
     w.towers.splice(0, w.towers.length, ...s.towers);
     (w as { map: WorldMap | null }).map = s.map;
     w.director = s.director;
+    w.trade = s.trade;
     w.units = s.units;
     w.winner = s.winner;
     w.commandLog.splice(0, w.commandLog.length, ...s.commandLog);
@@ -164,10 +171,15 @@ export class World {
 
   /** A raider camp (team 1) centred in a sector: a small tower that never builds. */
   addCamp(sector: number): Tower {
-    const t = createTower(this.newId(), 1, { x: sectorCenter(sector) - TOWER.cols / 2, front: 'both', coreCol: 2 });
-    t.kind = 'camp';
+    return this.addSmall(1, 'camp', sector, CAMP_LAYOUT);
+  }
+
+  /** A small preset tower (camp or trading post) centred in a sector. */
+  private addSmall(team: Team, kind: 'camp' | 'trader', sector: number, layout: (RoomId | null)[][]): Tower {
+    const t = createTower(this.newId(), team, { x: sectorCenter(sector) - TOWER.cols / 2, front: 'both', coreCol: 2 });
+    t.kind = kind;
     t.bank = { minerals: 0, gas: 0 };
-    CAMP_LAYOUT.forEach((row, floor) =>
+    layout.forEach((row, floor) =>
       row.forEach((def, col) => {
         if (def) placeRoom(t, this.newId(), def, col, floor, true);
       }),
@@ -204,6 +216,7 @@ export class World {
     // Units act before production, so a unit never moves on the tick it is born.
     unitSystem(this, DT);
     exploreSystem(this);
+    tradeSystem(this);
     productionSystem(this, DT);
     directorSystem(this);
     this.overtime();
@@ -352,6 +365,7 @@ export class World {
         units: this.units,
         map: this.map,
         director: this.director,
+        trade: this.trade,
         winner: this.winner,
       }),
     );

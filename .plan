@@ -123,7 +123,7 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       walls, then `{ until: 'discovered' }`, then three Barracks. No Gun Nest: with one the steady bot won 17%.)
       Original spec: Dormant (economy only) until discovered,
       then it sends its own units at you. Destroying its Core wins the run.
-- [ ] Trader: a neutral tower. When a player unit reaches it, a Trade panel unlocks (works from home afterwards):
+- [x] Trader: a neutral tower. When a player unit reaches it, a Trade panel unlocks (works from home afterwards):
       minerals ↔ gas at a posted, slowly drifting rate, and a one-time gift. Hostiles ignore it.
 - [ ] Run summary screen: time, sectors explored, raids repelled, rooms built. Best run saved locally (try/catch around storage).
 - [ ] Make Expedition the default mode.
@@ -147,6 +147,7 @@ Answered 2026-11-14: "dig it, go P4". No changes requested; the detailed questio
 
 ---
 Log
+- 2026-11-14: P4 Trader (sim): gift, trade command, drifting rate. SAVE_VERSION 5. 82 tests
 - 2026-11-14: P4 Stronghold (sim + AI), assault order for bots. Steady bot wins 28%. SAVE_VERSION 4
 - 2026-11-14: P3 built: client, balance bot, raid sizes tuned, difficulty scales raids. SAVE_VERSION 3. 75 tests. Feel test pending
 - 2026-11-14: P3 camps + raid director (sim). 74 tests
