@@ -3,7 +3,7 @@
 Fallout Shelter tower building meets StarCraft macro. Two towers face each other across one lane.
 You build rooms; units train on their own and march on the enemy. Your weapon is the shape of your tower.
 
-**Status: P4 done (the Expedition can be won).** Two modes. **Expedition** (default): one tower in fogged country. Raids
+**Status: P5 in progress (tech tree in; more bases next).** Two modes. **Expedition** (default): one tower in fogged country. Raids
 come from the left or right from 2:30; hold them with a garrison, Gun Nests and Flak, send squads out to explore, loot
 caches, burn raider camps and meet the Trader, then find and destroy the hidden Stronghold.
 **Skirmish**: two towers, one lane, an AI opponent.

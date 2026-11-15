@@ -173,7 +173,7 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     mergeable: false,
     buildable: true,
     color: '#8c6d46',
-    blurb: 'Tech. Unlocks the Hangar, Flak, the Lab and the Siege Walker.',
+    blurb: 'Tech. Unlocks the Hangar, Flak, the Lab and the Walker.',
   },
   lab: {
     id: 'lab',
@@ -199,7 +199,7 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     heals: 3,
     mergeable: false,
     buildable: true,
-    color: '#c8ccd8',
+    color: '#d98880',
     blurb: 'Heals this tower’s garrison while it stands at home.',
   },
   cannon: {
@@ -373,7 +373,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
   },
   walker: {
     id: 'walker',
-    name: 'Siege Walker',
+    name: 'Walker',
     cost: { minerals: 150, gas: 100 },
     supply: 3,
     trainTime: 16,

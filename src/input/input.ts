@@ -124,7 +124,11 @@ export function attachInput(
     else if (k === '=' || k === '+') game.cycleSpeed(1);
     else if (k === '`') game.debug = !game.debug;
     else if (k === 'b' || k === 'B') game.togglePosture();
-    else if (k >= '1' && k <= String(PALETTE.length)) game.togglePlacing(PALETTE[Number(k) - 1]);
+    else if (k.length === 1 && k >= '0' && k <= '9') {
+      // 1-9 pick the first nine rooms, 0 the tenth.
+      const room = PALETTE[k === '0' ? 9 : Number(k) - 1];
+      if (room) game.togglePlacing(room);
+    }
     else if ((k === 'Delete' || k === 'Backspace') && game.selected) game.demolishOrCancel(game.selected);
   });
 }

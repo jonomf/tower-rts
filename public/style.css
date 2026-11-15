@@ -66,6 +66,15 @@ i.s { color: var(--s); }
 .build[hidden] { display: none; }
 .build.active { background: rgba(255, 200, 87, 0.2); border-color: var(--accent); border-left-color: var(--room); }
 .build.poor .cost { color: #ff8f8f; }
+.build .lock { display: none; font-size: 11px; color: #c9b08a; white-space: nowrap; }
+.build.locked { opacity: 0.55; }
+.build.locked .cost { display: none; }
+.build.locked .lock { display: block; }
+#panel button.locked { opacity: 0.55; }
+@media (min-width: 900px) and (min-height: 521px) {
+  #palette { gap: 6px; }
+  .build { min-width: 70px; padding: 4px 7px; }
+}
 
 @media (orientation: landscape) and (max-height: 520px) {
   #palette {
@@ -74,8 +83,8 @@ i.s { color: var(--s); }
     background: linear-gradient(90deg, rgba(18, 20, 32, 0.55), var(--ui));
     border-top: 0; border-left: 1px solid var(--ui-line);
   }
-  #palette { gap: 5px; }
-  .build { min-width: 96px; min-height: 0; flex: 1; max-height: 52px; padding: 1px 8px; gap: 0; font-size: 14px; line-height: 1.15; }
+  #palette { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 4px; align-content: center; }
+  .build { min-width: 78px; min-height: 0; max-height: 52px; padding: 1px 4px; gap: 0; font-size: 13px; line-height: 1.15; border-left-width: 4px; }
   .build .cost { font-size: 12px; }
   #topbar .res { min-width: 54px; font-size: 15px; }
 }
@@ -119,8 +128,9 @@ i.s { color: var(--s); }
 #panel .summary .trade { grid-column: 2; grid-row: 2; margin-top: 0; align-self: start; }
 #panel .summary.has-trade .hint { display: none; }
 /* Strip: unit buttons on one row, without the supply line, so Collect/Demolish still fit in 120 px. */
-#panel .acts.train { grid-auto-flow: column; grid-auto-columns: 1fr; }
-#panel .train button { font-size: 13px; }
+#panel .acts.train { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 0; }
+#panel .acts.train button { font-size: 12px; min-height: 32px; padding: 0 1px; line-height: 1.1; white-space: nowrap; }
+#panel .train .cost { font-size: 10px; }
 #panel .train .cost + .cost { display: none; }
 
 @media (min-width: 900px) and (min-height: 521px) {
@@ -188,11 +198,11 @@ i.s { color: var(--s); }
   #panel .summary.has-trade .hint { display: block; }
   #panel .summary .trade, #panel .summary .orders { margin-top: 8px; }
   #panel .acts.train { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); }
-  #panel .train button { font-size: 15px; }
+  #panel .acts.train button { font-size: 15px; white-space: normal; min-height: 40px; }
   #panel .train .cost + .cost { display: inline; }
 }
 @media (min-width: 900px) and (min-height: 521px) {
-  #panel .train button { min-height: 52px; }
+  #panel .acts.train button { min-height: 52px; }
 }
 #panel .train .cost { font-size: 11px; white-space: nowrap; font-weight: 400; }
 #panel .train button.on { background: rgba(255, 200, 87, 0.18); }
@@ -252,3 +262,52 @@ i.s { color: var(--s); }
 #help small { color: var(--dim); font-weight: 400; font-size: 12px; }
 #help p, #help li { font-size: 14px; line-height: 1.45; color: #cfd4e4; }
 #help ul { padding-left: 18px; }
+
+/* ---- Tech sheet ---- */
+#tech { position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.55); display: none; align-items: center; justify-content: center; padding: 10px; }
+#tech.open { display: flex; }
+#tech .sheet { width: min(640px, 100%); max-height: 100%; overflow: auto; background: #1b1e2e; border: 1px solid var(--ui-line); border-radius: 16px; padding: 14px 12px; }
+#tech h2 { margin: 0 0 10px; font-size: 18px; }
+#tech small { color: var(--dim); font-weight: 400; font-size: 12px; margin-left: 6px; }
+#tech .acts { display: flex; justify-content: center; margin-top: 12px; }
+#tech-tree { position: relative; display: flex; flex-direction: column; gap: 26px; }
+#tech-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#tech-lines path { fill: none; stroke: #4a5070; stroke-width: 2; }
+#tech-lines path.lit { stroke: var(--accent); }
+#tech .tier { display: flex; justify-content: center; align-items: flex-start; gap: 6px; position: relative; }
+#tech .node {
+  flex: 0 1 112px; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 5px 6px;
+  background: #23273a; border: 1px solid var(--ui-line); border-top: 4px solid var(--room); border-radius: 8px; font-size: 12px;
+}
+#tech .node b { font-size: 13px; overflow-wrap: anywhere; }
+#tech .node .cost { color: var(--dim); }
+#tech .node .need { color: #7ee08a; font-size: 11px; }
+#tech .node.have { border-color: var(--accent); border-top-color: var(--room); }
+#tech .node.have .need { color: var(--accent); }
+#tech .node.locked { opacity: 0.6; }
+#tech .node.locked .need { color: #c9b08a; }
+#tech .u { font-size: 11px; padding: 1px 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow-wrap: anywhere; }
+#tech .u em { font-style: normal; color: #c9b08a; }
+#tech .u.locked { opacity: 0.7; }
+@media (max-width: 480px) {
+  #tech .tier { gap: 4px; }
+  #tech .node { padding: 4px 3px; font-size: 11px; }
+  #tech .node b { font-size: 12px; }
+  #tech .u { font-size: 10px; padding: 1px 2px; }
+}
+
+/* Landscape phone: the tree runs left to right (tiers are columns), and the room panel's unit buttons lose a line. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #panel .train .cost + .cost { display: none; }
+  #panel .acts.train button { min-height: 40px; font-size: 14px; }
+  #tech { padding: 6px; }
+  #tech .sheet { width: auto; max-width: 100%; padding: 8px 12px; position: relative; }
+  #tech h2 { margin-bottom: 6px; font-size: 16px; }
+  #tech .acts { position: absolute; top: 4px; right: 8px; margin: 0; }
+  #tech .acts button { min-height: 30px; }
+  #tech-tree { flex-direction: row; gap: 30px; align-items: center; }
+  #tech .tier { flex-direction: column; align-items: stretch; gap: 5px; }
+  #tech .node { flex: none; width: 124px; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 1px 6px; padding: 3px 6px; border-top-width: 1px; border-left: 4px solid var(--room); }
+  #tech .node.have { border-left-color: var(--room); }
+  #tech .node .need { flex-basis: 100%; }
+}

@@ -71,7 +71,7 @@ properties, and relative imports keep their `.ts` extension (tsc rewrites them t
 ```
 src/sim/        defs.ts (all numbers: rooms, units, lane), types.ts (Team 0/1/2, hostile(), opponent()),
                 world.ts (towers list, addTower, tower(team), towerById, tick, issue, hash, replay, spawnUnit,
-                damageRoom, supplyUsed), rng.ts, commands.ts (optional `tower` id on every command), tower.ts
+                damageRoom, supplyUsed), rng.ts, tech.ts (requires: hasRoom, roomLocked, unitLocked, techTiers), commands.ts (optional `tower` id on every command), tower.ts
                 (grid, support, merge, supply, rubble cost, faceOf, exitSide, defaultDeploy), scenario.ts (dummy),
                 map.ts (Expedition sectors: sectorOf, sectorCenter, generateMap), systems/{economy,production,
                 units (orders: garrison/march; towerAhead, frontRoom), explore (fog, sites, caches, visibleSectors),
@@ -81,7 +81,8 @@ src/ai/         types.ts (script format), scripts.ts (the scripts, as data), con
 src/game.ts     client state: match config + AIs, tick(), time control, selection, placing, floaters, toasts
 src/render/     layout.ts (cell ↔ world), camera.ts, renderer.ts (Canvas 2D)
 src/input/      pointer + keys → game verbs / camera
-src/ui/         hud.ts (DOM: top bar, palette, the permanent room panel / tower summary, menu, game over)
+src/ui/         hud.ts (DOM: top bar, palette, the permanent room panel / tower summary, menu, game over),
+                techtree.ts (the Tech sheet, drawn from `requires`), runs.ts (run summary, best run), save.ts
 public/         index.html, style.css, icon.svg (copied into dist/)
 tools/          build.ts, dev.ts, serve.ts, match.ts
 tests/          node:test, one file per system
@@ -103,4 +104,6 @@ After UI changes: `npm run build`, serve `dist/`, and drive it with Playwright (
 check for console errors. Look at every screenshot.
 
 ## Gates
-P4 is done. Don't start P5 unasked: Jono picks the first P5 item (candidates in `.plan`).
+P5 (tech tree, then more bases) is in progress. The Outpost design in `.plan` needs Jono's yes before it is built.
+New rooms and units: add the catalog entry (with `requires`), a row in `DESIGN.md`, and a case in `tests/tech.test.ts`;
+the palette, the Tech sheet and the train buttons pick it up from the data. Tests that aren't about tech use `freeTech: true`.

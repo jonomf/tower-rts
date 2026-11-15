@@ -311,6 +311,8 @@ export class Renderer {
         this.bubble(game, r.x + r.w / 2, r.y - 4, RES_ICON[p.res], RES_COLOR[p.res], fill >= 0.999);
     }
     if (def.supply) this.label(`+${Math.floor(def.supply * MERGE_MULT[group.length])} supply`, r.x + r.w / 2, r.y + r.h * 0.64, r.w, 'rgba(255,255,255,0.7)', 0.75);
+    if (def.heals) this.label(`+${def.heals} hp/s`, r.x + r.w / 2, r.y + r.h * 0.64, r.w, 'rgba(255,255,255,0.7)', 0.75);
+    if (room.def === 'workshop' || room.def === 'lab') this.label('tech', r.x + r.w / 2, r.y + r.h * 0.64, r.w, 'rgba(255,255,255,0.7)', 0.75);
     if (def.turret) {
       const open = openSidesAt(t, room.col, room.floor);
       const cx = r.x + r.w / 2, cy = r.y + r.h * 0.66;
@@ -318,8 +320,8 @@ export class Renderer {
       else {
         // A barrel toward each face it covers.
         ctx.strokeStyle = '#e6e6e6';
-        ctx.lineWidth = 4;
-        for (const side of open) line(ctx, cx, cy, cx + (side === 'left' ? -1 : 1) * r.w * 0.36, cy - (def.turret.hitsAir ? 10 : 0));
+        ctx.lineWidth = room.def === 'cannon' ? 7 : 4;
+        for (const side of open) line(ctx, cx, cy, cx + (side === 'left' ? -1 : 1) * r.w * (room.def === 'cannon' ? 0.46 : 0.36), cy - (def.turret.hitsAir ? 10 : 0));
         ctx.fillStyle = '#e6e6e6';
         ctx.beginPath();
         ctx.arc(cx, cy, 6, 0, Math.PI * 2);
@@ -449,10 +451,20 @@ export class Renderer {
       ctx.fill();
       ctx.fillStyle = body;
       ctx.beginPath();
-      ctx.moveTo(x + dir * 18, y);
-      ctx.lineTo(x - dir * 14, y - 10);
-      ctx.lineTo(x - dir * 8, y);
-      ctx.lineTo(x - dir * 14, y + 10);
+      if (u.def === 'interceptor') {
+        // A slim dart with swept wings.
+        ctx.moveTo(x + dir * 20, y);
+        ctx.lineTo(x - dir * 4, y - 4);
+        ctx.lineTo(x - dir * 16, y - 12);
+        ctx.lineTo(x - dir * 11, y);
+        ctx.lineTo(x - dir * 16, y + 12);
+        ctx.lineTo(x - dir * 4, y + 4);
+      } else {
+        ctx.moveTo(x + dir * 18, y);
+        ctx.lineTo(x - dir * 14, y - 10);
+        ctx.lineTo(x - dir * 8, y);
+        ctx.lineTo(x - dir * 14, y + 10);
+      }
       ctx.closePath();
       ctx.fill();
       ctx.fillStyle = d.color;
@@ -473,6 +485,33 @@ export class Renderer {
         ctx.beginPath();
         ctx.arc(x, feet - 29, 5, 0, Math.PI * 2);
         ctx.fill();
+      } else if (u.def === 'walker') {
+        // Two long legs, a hull, and a long gun.
+        top = feet - 44;
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 4;
+        line(ctx, x - 8, feet - 22, x - 12 + step, feet);
+        line(ctx, x + 8, feet - 22, x + 12 - step, feet);
+        ctx.fillStyle = body;
+        ctx.fillRect(x - 14, feet - 38, 28, 17);
+        ctx.fillStyle = d.color;
+        ctx.fillRect(x - 6, feet - 42, 12, 6);
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 4;
+        line(ctx, x + dir * 6, feet - 31, x + dir * 26, feet - 35);
+      } else if (u.def === 'scout') {
+        // Small, leaning forward, no rifle.
+        top = feet - 20;
+        const run = fighting ? 0 : Math.sin(game.time * 20 + u.id) * 3;
+        ctx.fillStyle = dark;
+        ctx.fillRect(x - 3, feet - 5, 2, 5 + run);
+        ctx.fillRect(x + 1, feet - 5, 2, 5 - run);
+        ctx.fillStyle = body;
+        ctx.fillRect(x - 4 + dir, feet - 14, 8, 9);
+        ctx.fillStyle = d.color;
+        ctx.beginPath();
+        ctx.arc(x + dir * 2, feet - 17, 3.5, 0, Math.PI * 2);
+        ctx.fill();
       } else {
         top = feet - 26;
         ctx.fillStyle = dark;
@@ -486,7 +525,8 @@ export class Renderer {
         ctx.fill();
         ctx.strokeStyle = '#ddd';
         ctx.lineWidth = 2;
-        line(ctx, x, feet - 13, x + dir * 11, feet - 14);
+        if (u.def === 'marksman') line(ctx, x - dir * 2, feet - 14, x + dir * 19, feet - 16); // long rifle
+        else line(ctx, x, feet - 13, x + dir * 11, feet - 14);
       }
     }
     if (u.hp < d.hp) bar(ctx, x - 12, top - 8, 24, 4, u.hp / d.hp, u.hp / d.hp > 0.5 ? '#7ee08a' : '#ff5d5d');

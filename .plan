@@ -139,10 +139,11 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       must be built). Build and setTrain refuse with "Needs a X first"; a production room whose tech room was lost
       waits (`waiting: 'tech'`). `freeTech` world option for tests. SAVE_VERSION 6.
 - [x] New rooms: Workshop (tech), Lab (tech), Infirmary (heals the garrison at home), Cannon (long-range ground turret).
-      New units: Scout, Marksman, Siege Walker (Barracks), Interceptor (Hangar). Existing rooms now gated:
+      New units: Scout, Marksman, Walker (Barracks), Interceptor (Hangar). Existing rooms now gated:
       Gun Nest ← Barracks; Hangar, Flak ← Workshop. Numbers in `DESIGN.md`.
-- [ ] Client: locked palette buttons and train buttons say what they need; new units and rooms drawn; a **Tech** sheet
-      (top bar button, key T) draws the tree from the data, lit up as you unlock it.
+- [x] Client: locked palette buttons and train buttons say what they need; new units and rooms drawn; a **Tech** sheet
+      (top bar button, key T; `src/ui/techtree.ts`) draws the tree from the data, lit up as you unlock it. Tiers run
+      top to bottom, or left to right on a landscape phone. Verified at all three sizes.
 - [ ] More bases (design to confirm with Jono, see Open questions): found an **Outpost** in an explored sector.
 - Later candidates: "rush" a room for instant output at a risk · crew assigned to rooms with stats (old Q2) ·
   room upgrades (levels) · incidents inside the tower (fire, breach) · raiders that use the new units.
@@ -160,6 +161,7 @@ Answered 2026-11-14: "dig it, go P4". No changes requested; the detailed questio
 
 ---
 Log
+- 2026-11-15: P5 tech tree client: locks in palette and room panel, Tech sheet, new unit shapes. Palette is 12 rooms
 - 2026-11-15: P5 tech tree (sim): requires, 4 rooms, 4 units. SAVE_VERSION 6. 91 tests. Steady bot 40%, Sharp 85%
 - 2026-11-14: P4 done: client (Stronghold AI, hidden towers, Trade buttons), run summary + best run, Expedition default. 84 tests
 - 2026-11-14: P4 Trader (sim): gift, trade command, drifting rate. SAVE_VERSION 5. 82 tests

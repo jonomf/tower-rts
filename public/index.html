@@ -19,6 +19,7 @@
       <div class="spacer"></div>
       <div class="res clock" id="clock">0:00</div>
       <button id="posture" title="Posture">Army</button>
+      <button id="tech-btn" title="Tech tree (T)">Tech</button>
       <button id="pause" title="Pause (Space)">❚❚</button>
       <button id="speed" title="Speed (− / +)">1×</button>
       <button id="recenter" title="Camera: your tower → whole field → enemy (F)">⌖</button>
@@ -62,6 +63,14 @@
       </div>
     </div>
 
+    <div id="tech">
+      <div class="sheet">
+        <h2>Tech tree <small>lines show what each room unlocks</small></h2>
+        <div id="tech-tree"></div>
+        <div class="acts"><button id="tech-close">Close</button></div>
+      </div>
+    </div>
+
     <div id="help">
       <div class="sheet">
         <h2>Tower RTS <small>build __BUILD__</small></h2>
@@ -73,6 +82,8 @@
           Units march on their own. Pick or pause a room’s unit in its panel. Pause it to save up for rooms.</p>
         <p>Attackers hit the lane-side column first. Ground units reach floors 1–2; flyers reach any floor.
           A destroyed room becomes rubble, which still holds up the floor above; rebuilding on it costs half.</p>
+        <p><b>Tech:</b> some rooms and units need another room built first (a Workshop for the Hangar, a Lab for the
+          Cannon…). Locked buttons say what they need; the <b>Tech</b> button (T) shows the whole tree.</p>
         <p><b>Expedition:</b> one tower in fogged country. <b>Goal: find and destroy the hidden Stronghold.</b> It sleeps
           until your scouts find it, then sends its own units at you.
           <b>Raids</b> start at 2:30 and come from the left or right; you get a warning, and a red arrow on the sector

@@ -2,7 +2,8 @@
 import { ECON, EXPEDITION_ONLY, MERGE_MULT, PALETTE, ROOMS, TRADE, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
 import { tradeOffer } from '../sim/systems/explore.ts';
 import { recordRun, runStats } from './runs.ts';
-import { unitLocked } from '../sim/tech.ts';
+import { roomLocked, unitLocked } from '../sim/tech.ts';
+import { TechTree } from './techtree.ts';
 import { bufferCap, canAfford, coreOf, defaultDeploy, groupOf, mergeGroups, openSidesAt, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
 import { DEFAULT_MATCH, type Game, type GameMode, type MatchConfig } from '../game.ts';
 import { SCRIPTS } from '../ai/scripts.ts';
@@ -29,15 +30,17 @@ export class Hud {
   private readonly buttons = new Map<string, HTMLButtonElement>();
   private panelKey = '';
   private readonly game: Game;
+  private readonly tech: TechTree;
 
   constructor(game: Game) {
     this.game = game;
+    this.tech = new TechTree(game);
     for (const id of PALETTE) {
       const d = ROOMS[id];
       const b = document.createElement('button');
       b.className = 'build';
       b.style.setProperty('--room', d.color);
-      b.innerHTML = `<span class="name">${d.name}</span><span class="cost">${costHtml(d.cost)}</span>`;
+      b.innerHTML = `<span class="name">${d.name}</span><span class="cost">${costHtml(d.cost)}</span><span class="lock"></span>`;
       b.title = `${d.name}: ${d.blurb} (${d.buildTime}s)`;
       b.addEventListener('click', () => game.togglePlacing(id));
       this.palette.append(b);
@@ -200,7 +203,11 @@ export class Hud {
       b.classList.toggle('active', g.placing === id);
       b.hidden = !g.world.map && EXPEDITION_ONLY.includes(id as keyof typeof ROOMS);
       b.classList.toggle('poor', !canAfford(t.bank, d.cost));
+      const need = roomLocked(g.world, g.team, id as keyof typeof ROOMS);
+      b.classList.toggle('locked', !!need);
+      set(b.querySelector<HTMLElement>('.lock')!, need ? `needs ${ROOMS[need].name}` : '');
     }
+    this.tech.update();
 
     if (g.toast) {
       set(this.toast, g.toast.text);
@@ -365,6 +372,10 @@ export class Hud {
       lines.push(`+${Math.floor(d.supply * MERGE_MULT[group.length])} supply${group.length > 1 ? ` (merged ×${group.length})` : ''}`);
     } else if (r.def === 'core') {
       lines.push(`HP ${Math.ceil(r.hp)} / ${d.hp} · +${ECON.coreRate.minerals} minerals/s`);
+    } else if (d.heals) {
+      lines.push(`Heals units at home: +${d.heals} hp/s each`);
+    } else if (d.requires && !d.turret && !d.trains && !d.produces && !d.supply) {
+      lines.push('Tech room: see the Tech sheet (T) for what it unlocks.');
     } else if (d.turret) {
       const open = openSidesAt(g.tower, r.col, r.floor);
       lines.push(`Hits ${d.turret.hitsAir ? 'air' : 'ground'} units within ${d.turret.range} cells · ${Math.round(d.turret.damage / d.turret.cooldown)} dmg/s`);
@@ -390,6 +401,8 @@ export class Hud {
       trainHtml = `<div class="acts train">${d.trains
         .map((id) => {
           const u = UNITS[id];
+          const need = unitLocked(g.world, g.team, id);
+          if (need) return `<button disabled class="locked" title="${u.blurb}">${u.name}<span class="cost">needs ${ROOMS[need].name}</span></button>`;
           return `<button data-act="train:${id}" class="${r.train === id ? 'on' : ''}" title="${u.blurb}">${u.name}<span class="cost">${costHtml(u.cost)}</span><span class="cost">${u.supply} supply</span></button>`;
         })
         .join('')}<button data-act="train:off" class="${r.train ? '' : 'on'}">Pause</button></div>`;
@@ -408,7 +421,8 @@ export class Hud {
     // Only rebuild the panel's buttons when its structure changes. Rebuilding on every progress tick
     // replaced a button between mousedown and mouseup, which swallowed clicks.
     const linesHtml = lines.map((l) => `<p>${l}</p>`).join('');
-    const key = JSON.stringify([r.id, r.built, removeErr, canCollect, group.length, r.train, r.deploy, g.tower.posture]);
+    const locks = (d.trains ?? []).map((id) => unitLocked(g.world, g.team, id));
+    const key = JSON.stringify([r.id, r.built, removeErr, canCollect, group.length, r.train, r.deploy, g.tower.posture, locks]);
     if (key === this.panelKey) {
       this.setLines(linesHtml);
       return;

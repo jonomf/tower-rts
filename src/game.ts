@@ -10,6 +10,7 @@ import { PLAYER, type Command, type CommandResult, type Deploy, type Team } from
 import { CELL_H, CELL_W, cellRect, type Cell } from './render/layout.ts';
 import { AiController } from './ai/controller.ts';
 import { ALL_SCRIPTS, SCRIPTS, STRONGHOLD } from './ai/scripts.ts';
+import { roomLocked } from './sim/tech.ts';
 import type { AiLevel } from './ai/types.ts';
 
 /**
@@ -287,6 +288,12 @@ export class Game {
 
   togglePlacing(def: RoomId): void {
     if (!this.world.map && EXPEDITION_ONLY.includes(def)) return;
+    const need = roomLocked(this.world, this.team, def);
+    if (need) {
+      this.placing = null;
+      this.notify(`${ROOMS[def].name} needs a ${ROOMS[need].name} first (see Tech).`, 'error');
+      return;
+    }
     this.placing = this.placing === def ? null : def;
     if (this.placing) {
       this.selected = null;
