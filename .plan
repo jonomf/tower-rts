@@ -144,7 +144,13 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
 - [x] Client: locked palette buttons and train buttons say what they need; new units and rooms drawn; a **Tech** sheet
       (top bar button, key T; `src/ui/techtree.ts`) draws the tree from the data, lit up as you unlock it. Tiers run
       top to bottom, or left to right on a landscape phone. Verified at all three sizes.
-- [ ] More bases (design to confirm with Jono, see Open questions): found an **Outpost** in an explored sector.
+- [ ] More bases. **Open question for Jono (asked 2026-11-15), proposal:** an **Outpost** you found in any explored
+      sector that has no tower (empty, looted cache, ruin, or a camp you destroyed). Cost 300 minerals, paid from home;
+      a garrison unit must be standing there. It is a second full tower (small Core, 600 hp) that you build in like
+      home: tap its sector on the strip to go there. One shared bank, supply and tech tree across your towers.
+      Raids pick the nearer of your towers on their side. Losing an Outpost loses its rooms, not the run; losing
+      the home Core still ends it. Alternatives: (a) smaller fixed-size outposts (2 floors); (b) separate banks per
+      tower with convoys. Needs: `game.tower` → the tower in view, commands already take a tower id, SAVE bump.
 - Later candidates: "rush" a room for instant output at a risk · crew assigned to rooms with stats (old Q2) ·
   room upgrades (levels) · incidents inside the tower (fire, breach) · raiders that use the new units.
 
