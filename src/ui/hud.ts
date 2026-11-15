@@ -2,6 +2,7 @@
 import { ECON, EXPEDITION_ONLY, MERGE_MULT, PALETTE, ROOMS, TRADE, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
 import { tradeOffer } from '../sim/systems/explore.ts';
 import { recordRun, runStats } from './runs.ts';
+import { unitLocked } from '../sim/tech.ts';
 import { bufferCap, canAfford, coreOf, defaultDeploy, groupOf, mergeGroups, openSidesAt, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
 import { DEFAULT_MATCH, type Game, type GameMode, type MatchConfig } from '../game.ts';
 import { SCRIPTS } from '../ai/scripts.ts';
@@ -382,6 +383,7 @@ export class Hud {
           gas: `Waiting for <i class="g">▲</i> gas${g.tower.rooms.some((x) => x.def === 'refinery') ? '' : ' (build a Refinery)'}`,
           supply: 'Waiting for <i class="s">☗</i> supply (build Quarters)',
           posture: 'Paused: Build posture',
+          tech: `Needs a ${ROOMS[unitLocked(g.world, g.team, r.train) ?? 'workshop'].name} (it was lost)`,
         }[r.waiting ?? 'minerals'];
         lines.push(why);
       }

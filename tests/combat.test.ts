@@ -15,7 +15,7 @@ function arena(opts: { scenario?: 'none' | 'dummy' } = {}) {
 }
 /** One tower and no enemy, so nothing ever dies (production tests). */
 function solo() {
-  const w = new World({ teams: [0] });
+  const w = new World({ teams: [0], freeTech: true }); // these tests are about placement and production, not tech
   w.tower(0).bank = { minerals: 100000, gas: 100000 };
   return w;
 }

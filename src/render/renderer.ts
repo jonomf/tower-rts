@@ -36,6 +36,7 @@ const WAIT_LOOK: Record<Waiting, { text: string; color: string }> = {
   minerals: { text: 'needs ◆', color: '#7cc6ff' },
   gas: { text: 'needs ▲', color: '#7ee08a' },
   supply: { text: 'needs ☗', color: '#f4a6b8' },
+  tech: { text: 'needs tech', color: '#c9b08a' },
   posture: { text: 'build mode', color: '#ffc857' },
 };
 

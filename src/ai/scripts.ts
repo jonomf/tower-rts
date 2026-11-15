@@ -57,6 +57,7 @@ export const BOTS: Record<string, AiScript> = {
       { build: 'barracks', at: 'core', train: 'trooper', deploy: 'right' },
       { build: 'quarters', at: 'up' }, train(60),
       { build: 'refinery', at: 'up' },
+      { build: 'workshop', at: 'up' },
       { build: 'flak', at: 'left' },
       { build: 'flak', at: 'right' }, train(60),
       { build: 'barracks', at: 'core', train: 'trooper', deploy: 'left' },

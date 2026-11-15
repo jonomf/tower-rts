@@ -2,7 +2,7 @@
  * Units: march along the world axis, stop to fight what they can hit, and chew into hostile tower faces.
  * The world is 1-D (x in cells). A unit walks in its own direction; team 0 starts toward +x in Skirmish.
  */
-import { LANE, MAP, TOWER, UNITS } from '../defs.ts';
+import { LANE, MAP, ROOMS, TOWER, UNITS } from '../defs.ts';
 import { sectorCenter } from '../map.ts';
 import { faceOf, roomAt } from '../tower.ts';
 import { hostile, type Room, type Side, type Team, type Tower, type Unit } from '../types.ts';
@@ -101,7 +101,7 @@ export function unitSystem(w: World, dt: number): void {
     const dir = u.dir;
     const ahead = towerAhead(w, u.team, u.px, dir, reach);
     if (ahead && Math.abs(ahead.face - u.px) <= reach && d.attack.hitsGround) {
-      const room = frontRoom(ahead.tower, ahead.side, d.air);
+      const room = frontRoom(ahead.tower, ahead.side, d.air || !!d.attack.siege);
       if (room) {
         u.target = { kind: 'room', tower: ahead.tower.id, id: room.id };
         if (u.cooldown <= 0) {
@@ -116,7 +116,7 @@ export function unitSystem(w: World, dt: number): void {
             talt: room.floor + 0.5,
             room: { x: ahead.tower.x, side: ahead.side, col: room.col, floor: room.floor, w: room.w },
           });
-          w.damageRoom(ahead.tower, room, d.attack.damage);
+          w.damageRoom(ahead.tower, room, d.attack.damage * (d.attack.vsRooms ?? 1));
         }
         continue;
       }
@@ -136,7 +136,21 @@ export function unitSystem(w: World, dt: number): void {
   }
 
   for (const [target, damage] of hits) target.hp -= damage;
+  healSystem(w, dt);
   // Remove the dead.
   for (const u of w.units) if (u.hp <= 0) w.effects.push({ kind: 'died', tick: w.tick, x: u.x, alt: u.alt, team: u.team });
   w.units = w.units.filter((u) => u.hp > 0);
+}
+
+/** Infirmaries: each built one restores `heals` hp/s to every garrisoned unit of its tower standing at the tower. */
+function healSystem(w: World, dt: number): void {
+  for (const t of w.towers) {
+    let rate = 0;
+    for (const r of t.rooms) if (r.built) rate += ROOMS[r.def].heals ?? 0;
+    if (rate <= 0) continue;
+    for (const u of w.units) {
+      if (u.home !== t.id || u.order !== 'garrison' || u.hp <= 0 || u.x < t.x - 1 || u.x > t.x + TOWER.cols + 1) continue;
+      u.hp = Math.min(UNITS[u.def].hp, u.hp + rate * dt);
+    }
+  }
 }

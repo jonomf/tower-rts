@@ -39,12 +39,28 @@ So an untapped room earns 40% of its rate, and a room tapped at least every ~30 
 | Mine | 75/0 | 8 | 200 | +2 minerals/s |
 | Refinery | 75/0 | 10 | 200 | +1 gas/s |
 | Quarters | 100/0 | 10 | 250 | +8 supply (base 6) |
-| Barracks | 150/0 | 15 | 300 | trains ground units (Trooper, Bruiser) on repeat |
-| Hangar | 150/100 | 20 | 300 | trains air units (Flyer) on repeat; must be on floor 4+ |
-| Gun Nest | 100/0 | 12 | 400 | lane face only; anti-ground, range 6 |
-| Flak | 100/50 | 12 | 400 | lane face only; anti-air, range 7 |
-| Lab | 100/100 | 20 | 250 | research; tier-2 unlock + upgrades |
+| Barracks | 150/0 | 15 | 300 | trains ground units on repeat (Trooper, Scout, Bruiser; Marksman and Siege Walker with tech) |
+| Hangar | 150/100 | 20 | 300 | trains air units on repeat (Flyer; Interceptor with a Lab); floor 4+; **needs Workshop** |
+| Gun Nest | 100/0 | 12 | 400 | outermost room; 8 dmg / 0.5 s to ground within 3 cells; **needs Barracks** |
+| Flak | 100/50 | 12 | 400 | outermost room; 12 dmg / 0.6 s to air within 4 cells; **needs Workshop** |
+| Cannon | 200/100 | 18 | 500 | outermost room; 45 dmg / 2.5 s to ground within 6 cells; **needs Lab** |
+| Workshop | 150/0 | 15 | 300 | tech: unlocks Hangar, Flak, Lab, Siege Walker; **needs Barracks** |
+| Lab | 150/100 | 20 | 250 | tech: unlocks Cannon, Marksman, Interceptor; **needs Workshop** |
+| Infirmary | 125/25 | 12 | 250 | each heals this tower's garrison at home by 3 hp/s per unit; **needs Quarters** |
 | Wall | 50/0 | 6 | 600 | does nothing; cheap armor |
+
+## Tech tree
+A room or unit with a requirement is unlocked while your team owns a **built** room of that kind (any of your towers).
+Lose the tech room and the things it unlocked can't be started again until it is rebuilt (rooms already built stay).
+
+```
+Core ─ Mine · Refinery · Wall
+     ├ Quarters ─ Infirmary
+     └ Barracks (Trooper, Scout, Bruiser) ─ Gun Nest
+                └ Workshop (+ Siege Walker) ─ Hangar (Flyer) · Flak
+                           └ Lab (+ Marksman, Interceptor) ─ Cannon
+```
+Gun Nest, Flak and Cannon are Expedition only. The Skirmish AIs use none of the gated things (`match --all` unchanged).
 
 ## Lane & units
 The lane is 1-D: 16 cells between the two lane faces (one cell = one tower column wide). Range and speed are in cells.
@@ -56,8 +72,10 @@ Production rooms train their picked unit on repeat; each job is paid when it sta
 | Trooper | Barracks | 50/0 | 1 | 6 s | 45 | 6/0.6 | 2 | 1.0 | G+A | cheap all-rounder |
 | Bruiser | Barracks | 100/25 | 2 | 9 s | 120 | 20/1.5 | 0.6 | 0.8 | G | armored melee, eats Troopers |
 | Flyer | Hangar | 125/75 | 2 | 10 s | 90 | 12/1.0 | 1.5 | 1.4 | G | air-to-ground; rooms on any floor |
-| Siege Walker (M4) | Barracks T2 | 150/100 | 3 | | 160 | 40/3.0 | 4 | 0.5 | G + rooms any floor | tower breaker |
-| Interceptor (M4) | Hangar T2 | 100/100 | 2 | | 80 | 10/0.5 | 2.5 | 1.6 | A | air superiority |
+| Scout | Barracks | 40/0 | 1 | 4 s | 35 | 3/0.8 | 1.5 | 2.2 | G | fast explorer, loses fights |
+| Marksman | Barracks + Lab | 75/40 | 1 | 9 s | 40 | 22/1.6 | 4 | 0.9 | G+A | long range, fragile |
+| Siege Walker | Barracks + Workshop | 150/100 | 3 | 16 s | 180 | 40/3.0 | 4 | 0.5 | G; rooms on any floor ×2 | tower breaker |
+| Interceptor | Hangar + Lab | 100/75 | 2 | 10 s | 80 | 10/0.5 | 2.5 | 1.6 | A | air superiority |
 
 Intended counters: Bruiser > Trooper swarm · Trooper/Flak/Interceptor > Flyer · Flyer > Bruiser and Walker · Gun Nest > ground waves · Walker > turrets and walls.
 

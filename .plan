@@ -133,10 +133,19 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
 - Exit: a full run can be won; a scripted bot wins 30–60% of seeds at Steady. ✅ 40 maps, Steady raids: Steady bot wins
   38% (avg 9:11), Sharp 95%, Relaxed 0%. Verified in headless Chromium at all three sizes. **Next is P5: Jono picks.**
 
-## P5: Fallout Shelter depth (pick with Jono after P3; do not start unasked)
-Candidates, roughly cheapest first: tech that pays (old M4 roster: Siege Walker, Interceptor, Lab upgrades) ·
-"rush" a room for instant output at a risk · crew assigned to rooms with stats (old Q2) · room upgrades (levels) ·
-incidents inside the tower (fire, breach) · a bigger tower that unlocks floors as you grow.
+## P5: tech tree and more bases (Jono, 2026-11-15: "build up the tech tree. More kinds of rooms and units, a diagram
+## of the tech tree in game. Also we want to be able to make more bases.")
+- [x] Tech requirements as data: `requires` on rooms and units (`src/sim/tech.ts`: team-wide, any own tower, the room
+      must be built). Build and setTrain refuse with "Needs a X first"; a production room whose tech room was lost
+      waits (`waiting: 'tech'`). `freeTech` world option for tests. SAVE_VERSION 6.
+- [x] New rooms: Workshop (tech), Lab (tech), Infirmary (heals the garrison at home), Cannon (long-range ground turret).
+      New units: Scout, Marksman, Siege Walker (Barracks), Interceptor (Hangar). Existing rooms now gated:
+      Gun Nest ← Barracks; Hangar, Flak ← Workshop. Numbers in `DESIGN.md`.
+- [ ] Client: locked palette buttons and train buttons say what they need; new units and rooms drawn; a **Tech** sheet
+      (top bar button, key T) draws the tree from the data, lit up as you unlock it.
+- [ ] More bases (design to confirm with Jono, see Open questions): found an **Outpost** in an explored sector.
+- Later candidates: "rush" a room for instant output at a risk · crew assigned to rooms with stats (old Q2) ·
+  room upgrades (levels) · incidents inside the tower (fire, breach) · raiders that use the new units.
 
 ## Later
 Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player-written automation (Auto-Starcraft tie-in) · AR.
@@ -151,6 +160,7 @@ Answered 2026-11-14: "dig it, go P4". No changes requested; the detailed questio
 
 ---
 Log
+- 2026-11-15: P5 tech tree (sim): requires, 4 rooms, 4 units. SAVE_VERSION 6. 91 tests. Steady bot 40%, Sharp 85%
 - 2026-11-14: P4 done: client (Stronghold AI, hidden towers, Trade buttons), run summary + best run, Expedition default. 84 tests
 - 2026-11-14: P4 Trader (sim): gift, trade command, drifting rate. SAVE_VERSION 5. 82 tests
 - 2026-11-14: P4 Stronghold (sim + AI), assault order for bots. Steady bot wins 28%. SAVE_VERSION 4

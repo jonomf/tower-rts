@@ -1,5 +1,6 @@
 import { ROOMS, UNITS } from '../defs.ts';
 import { canAfford, defaultDeploy, supplyMax } from '../tower.ts';
+import { unitLocked } from '../tech.ts';
 import type { World } from '../world.ts';
 
 /**
@@ -7,7 +8,7 @@ import type { World } from '../world.ts';
  * the bank covers the unit, and supply has room for it. Finished units leave the tower right away.
  * Rooms are served oldest first, and a room that is waiting on resources holds its price back from the
  * rooms after it, so cheap units can't starve an expensive one forever.
- * In Build posture no room starts a new unit (one in progress still finishes).
+ * In Build posture no room starts a new unit (one in progress still finishes). A unit whose tech room was lost waits.
  * Each idle room records why it is waiting (`room.waiting`), for the client.
  */
 export function productionSystem(w: World, dt: number): void {
@@ -19,7 +20,8 @@ export function productionSystem(w: World, dt: number): void {
       if (!r.job && r.train && t.posture === 'build') r.waiting = 'posture';
       else if (!r.job && r.train) {
         const u = UNITS[r.train];
-        if (w.supplyUsed(t) + u.supply > supplyMax(t)) r.waiting = 'supply';
+        if (u.requires && unitLocked(w, t.team, r.train)) r.waiting = 'tech';
+        else if (w.supplyUsed(t) + u.supply > supplyMax(t)) r.waiting = 'supply';
         else {
           // Held-back resources only block a unit that needs that resource.
           const free = {

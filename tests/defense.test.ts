@@ -6,7 +6,7 @@ import { openSidesAt, roomAt } from '../src/sim/tower.ts';
 
 /** An Expedition home tower (open on both sides, Core in columns 2-3) with a deep bank. */
 function home() {
-  const w = new World({ mode: 'expedition', seed: 2 });
+  const w = new World({ mode: 'expedition', seed: 2, freeTech: true }); // turret rules, not tech (tests/tech.test.ts)
   const t = w.tower(0);
   t.bank = { minerals: 100000, gas: 100000 };
   const build = (room: RoomId, col: number, floor: number) => w.issue({ type: 'build', team: 0, room, col, floor });
@@ -33,7 +33,7 @@ test('turrets must be the outermost room on their floor (toward a front face)', 
   build('wall', 4, 1);
   assert.deepEqual(openSidesAt(t, 1, 1), []);
   // Skirmish towers have one front: only that side counts.
-  const sk = new World({ teams: [0, 1] });
+  const sk = new World({ teams: [0, 1], freeTech: true });
   sk.tower(0).bank = { minerals: 9999, gas: 9999 };
   sk.issue({ type: 'build', team: 0, room: 'wall', col: 5, floor: 0 });
   assert.deepEqual(sk.issue({ type: 'build', team: 0, room: 'gunNest', col: 4, floor: 0 }), { ok: false, reason: 'Gun Nest must be the outermost room on its floor' });

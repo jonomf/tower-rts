@@ -1,4 +1,5 @@
 /** The only way to change the world. Player input, AI and (later) the network all come through here. */
+import { roomLocked, unitLocked } from './tech.ts';
 import { ECON, ROOMS, TRADE, UNITS, type Cost } from './defs.ts';
 import { tradeOffer } from './systems/explore.ts';
 import { buildCost, canAfford, defaultDeploy, groupOf, placeRoom, placementError, removalError, removeRoom, roomAt } from './tower.ts';
@@ -36,6 +37,8 @@ export function applyCommand(w: World, cmd: Command): CommandResult {
       const d = ROOMS[cmd.room];
       if (!d || !d.buildable) return fail('Can’t build that');
       if (w.winner !== null) return fail('The game is over');
+      const need = roomLocked(w, t.team, cmd.room);
+      if (need) return fail(`Needs a ${ROOMS[need].name} first`);
       const err = placementError(t, cmd.room, cmd.col, cmd.floor);
       if (err) return fail(err);
       const cost = buildCost(t, cmd.room, cmd.col, cmd.floor);
@@ -100,6 +103,8 @@ export function applyCommand(w: World, cmd: Command): CommandResult {
       if (!r || !trains) return fail('This room doesn’t train units');
       if (cmd.unit !== null && !trains.includes(cmd.unit)) return fail(`${ROOMS[r.def].name} can’t train that`);
       if (r.train === cmd.unit) return fail('Already set');
+      const need = cmd.unit && unitLocked(w, t.team, cmd.unit);
+      if (need) return fail(`Needs a ${ROOMS[need].name} first`);
       // Switching or pausing drops the job in progress, refunded in full.
       const refund = jobRefund(r);
       t.bank.minerals += refund.minerals;

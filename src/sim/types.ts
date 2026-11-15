@@ -41,8 +41,8 @@ export type Room = {
   cooldown: number;
 };
 
-/** Why a production room isn't training: short of a resource, out of supply, or the tower is in Build posture. */
-export type Waiting = 'minerals' | 'gas' | 'supply' | 'posture';
+/** Why a production room isn't training: short of a resource, out of supply, Build posture, or its tech room is gone. */
+export type Waiting = 'minerals' | 'gas' | 'supply' | 'posture' | 'tech';
 
 /** army: production rooms train as usual. build: no room starts a new unit (one in progress finishes). */
 export type Posture = 'army' | 'build';

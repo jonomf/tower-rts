@@ -6,8 +6,8 @@
 export type Res = 'minerals' | 'gas';
 export type Cost = { minerals: number; gas: number };
 
-export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'barracks' | 'hangar' | 'wall' | 'gunNest' | 'flak' | 'rubble' | 'campCore' | 'market';
-export type UnitId = 'trooper' | 'bruiser' | 'flyer';
+export type RoomId = 'core' | 'mine' | 'refinery' | 'quarters' | 'barracks' | 'hangar' | 'wall' | 'gunNest' | 'flak' | 'workshop' | 'lab' | 'infirmary' | 'cannon' | 'rubble' | 'campCore' | 'market';
+export type UnitId = 'trooper' | 'scout' | 'bruiser' | 'marksman' | 'walker' | 'flyer' | 'interceptor';
 
 export type RoomDef = {
   id: RoomId;
@@ -34,6 +34,10 @@ export type RoomDef = {
    * Must be built with nothing between it and a front face on its floor; walled in later, it stops firing.
    */
   turret?: { damage: number; cooldown: number; range: number; hitsAir: boolean };
+  /** Tech: your team must own a built room of each of these before this can be built (see sim/tech.ts). */
+  requires?: RoomId[];
+  /** Hit points per second restored to each of this tower's garrisoned units standing at the tower. */
+  heals?: number;
   color: string;
   blurb: string;
 };
@@ -97,7 +101,7 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     cost: { minerals: 150, gas: 0 },
     buildTime: 15,
     hp: 300,
-    trains: ['trooper', 'bruiser'],
+    trains: ['trooper', 'scout', 'bruiser', 'marksman', 'walker'],
     mergeable: false,
     buildable: true,
     color: '#d17a22',
@@ -110,8 +114,9 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     cost: { minerals: 150, gas: 100 },
     buildTime: 20,
     hp: 300,
-    trains: ['flyer'],
+    trains: ['flyer', 'interceptor'],
     minFloor: 3,
+    requires: ['workshop'],
     mergeable: false,
     buildable: true,
     color: '#7b5ea7',
@@ -137,6 +142,7 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     buildTime: 12,
     hp: 400,
     turret: { damage: 8, cooldown: 0.5, range: 3, hitsAir: false },
+    requires: ['barracks'],
     mergeable: false,
     buildable: true,
     color: '#a23b3b',
@@ -150,10 +156,65 @@ export const ROOMS: Record<RoomId, RoomDef> = {
     buildTime: 12,
     hp: 400,
     turret: { damage: 12, cooldown: 0.6, range: 4, hitsAir: true },
+    requires: ['workshop'],
     mergeable: false,
     buildable: true,
     color: '#2f8f8f',
     blurb: 'Shoots air units near its side of the tower. Must be the outermost room on its floor.',
+  },
+  workshop: {
+    id: 'workshop',
+    name: 'Workshop',
+    width: 1,
+    cost: { minerals: 150, gas: 0 },
+    buildTime: 15,
+    hp: 300,
+    requires: ['barracks'],
+    mergeable: false,
+    buildable: true,
+    color: '#8c6d46',
+    blurb: 'Tech. Unlocks the Hangar, Flak, the Lab and the Siege Walker.',
+  },
+  lab: {
+    id: 'lab',
+    name: 'Lab',
+    width: 1,
+    cost: { minerals: 150, gas: 100 },
+    buildTime: 20,
+    hp: 250,
+    requires: ['workshop'],
+    mergeable: false,
+    buildable: true,
+    color: '#4f6fd0',
+    blurb: 'Advanced tech. Unlocks the Cannon, the Marksman and the Interceptor.',
+  },
+  infirmary: {
+    id: 'infirmary',
+    name: 'Infirmary',
+    width: 1,
+    cost: { minerals: 125, gas: 25 },
+    buildTime: 12,
+    hp: 250,
+    requires: ['quarters'],
+    heals: 3,
+    mergeable: false,
+    buildable: true,
+    color: '#c8ccd8',
+    blurb: 'Heals this tower’s garrison while it stands at home.',
+  },
+  cannon: {
+    id: 'cannon',
+    name: 'Cannon',
+    width: 1,
+    cost: { minerals: 200, gas: 100 },
+    buildTime: 18,
+    hp: 500,
+    turret: { damage: 45, cooldown: 2.5, range: 6, hitsAir: false },
+    requires: ['lab'],
+    mergeable: false,
+    buildable: true,
+    color: '#7a2f4f',
+    blurb: 'Long-range gun against ground units. Slow, heavy shots. Must be the outermost room on its floor.',
   },
   campCore: {
     id: 'campCore',
@@ -194,9 +255,9 @@ export const ROOMS: Record<RoomId, RoomDef> = {
 };
 
 /** Build palette order. */
-export const PALETTE: RoomId[] = ['mine', 'refinery', 'quarters', 'barracks', 'hangar', 'wall', 'gunNest', 'flak'];
+export const PALETTE: RoomId[] = ['mine', 'refinery', 'quarters', 'wall', 'barracks', 'infirmary', 'gunNest', 'workshop', 'hangar', 'flak', 'lab', 'cannon'];
 /** Rooms offered only in Expedition (the Skirmish AI has no answer to turrets yet). */
-export const EXPEDITION_ONLY: RoomId[] = ['gunNest', 'flak'];
+export const EXPEDITION_ONLY: RoomId[] = ['gunNest', 'flak', 'cannon'];
 
 export const TOWER = {
   cols: 6,
@@ -245,7 +306,13 @@ export type UnitDef = {
     range: number;
     hitsGround: boolean;
     hitsAir: boolean;
+    /** Ground units only: reaches rooms on every floor, not just the bottom two. */
+    siege?: boolean;
+    /** Damage multiplier against rooms (default 1). */
+    vsRooms?: number;
   };
+  /** Tech: your team must own a built room of each of these to train this unit. */
+  requires?: RoomId[];
   color: string;
   blurb: string;
 };
@@ -264,6 +331,19 @@ export const UNITS: Record<UnitId, UnitDef> = {
     color: '#9fd3ff',
     blurb: 'Cheap all-rounder. Shoots ground and air.',
   },
+  scout: {
+    id: 'scout',
+    name: 'Scout',
+    cost: { minerals: 40, gas: 0 },
+    supply: 1,
+    trainTime: 4,
+    hp: 35,
+    speed: 2.2,
+    air: false,
+    attack: { damage: 3, cooldown: 0.8, range: 1.5, hitsGround: true, hitsAir: false },
+    color: '#b8f2c9',
+    blurb: 'Fast and frail. Send it out to lift the fog; it loses most fights.',
+  },
   bruiser: {
     id: 'bruiser',
     name: 'Bruiser',
@@ -277,6 +357,34 @@ export const UNITS: Record<UnitId, UnitDef> = {
     color: '#ffb36b',
     blurb: 'Armored brawler. Ground only: flyers pass right over it.',
   },
+  marksman: {
+    id: 'marksman',
+    name: 'Marksman',
+    cost: { minerals: 75, gas: 40 },
+    supply: 1,
+    trainTime: 9,
+    hp: 40,
+    speed: 0.9,
+    air: false,
+    attack: { damage: 22, cooldown: 1.6, range: 4, hitsGround: true, hitsAir: true },
+    requires: ['lab'],
+    color: '#f2e394',
+    blurb: 'Long range, hits ground and air, dies fast up close. Needs a Lab.',
+  },
+  walker: {
+    id: 'walker',
+    name: 'Siege Walker',
+    cost: { minerals: 150, gas: 100 },
+    supply: 3,
+    trainTime: 16,
+    hp: 180,
+    speed: 0.5,
+    air: false,
+    attack: { damage: 40, cooldown: 3, range: 4, hitsGround: true, hitsAir: false, siege: true, vsRooms: 2 },
+    requires: ['workshop'],
+    color: '#e07a5f',
+    blurb: 'Slow tower breaker: outranges Gun Nests, double damage to rooms on any floor. Needs a Workshop.',
+  },
   flyer: {
     id: 'flyer',
     name: 'Flyer',
@@ -289,6 +397,20 @@ export const UNITS: Record<UnitId, UnitDef> = {
     attack: { damage: 12, cooldown: 1.0, range: 1.5, hitsGround: true, hitsAir: false },
     color: '#d6b8ff',
     blurb: 'Air-to-ground. Hits rooms on any floor; only anti-air can touch it.',
+  },
+  interceptor: {
+    id: 'interceptor',
+    name: 'Interceptor',
+    cost: { minerals: 100, gas: 75 },
+    supply: 2,
+    trainTime: 10,
+    hp: 80,
+    speed: 1.6,
+    air: true,
+    attack: { damage: 10, cooldown: 0.5, range: 2.5, hitsGround: false, hitsAir: true },
+    requires: ['lab'],
+    color: '#8fe3e8',
+    blurb: 'Air superiority: shoots only other air units. Needs a Lab.',
   },
 };
 
