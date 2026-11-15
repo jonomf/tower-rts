@@ -53,7 +53,7 @@ export type LoggedCommand = { tick: number; cmd: Command };
  * Everything needed to resume a world exactly (save games). Plain JSON. Bump SAVE_VERSION whenever the shape of any
  * sim state type changes (Tower, Room, Unit, WorldMap, options...), so old saves are discarded instead of misread.
  */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 export type WorldSnapshot = {
   version: number;
   options: WorldOptions;
@@ -98,7 +98,14 @@ export class World {
       this.options.teams = [0];
       this.addTower(0, EXPEDITION_HOME);
       this.map = generateMap(this.options.seed);
-      for (const site of this.map.sites) if (site.kind === 'camp') this.addCamp(site.sector);
+      for (const site of this.map.sites) {
+        if (site.kind === 'camp') this.addCamp(site.sector);
+        // The Stronghold: a full hostile tower facing home, Core at its back. An AiController runs it (see Game).
+        if (site.kind === 'stronghold') {
+          const right = site.sector > 0;
+          this.addTower(1, { x: sectorCenter(site.sector) - TOWER.cols / 2, front: right ? 'left' : 'right', coreCol: right ? TOWER.cols - 2 : 0 });
+        }
+      }
       this.director = createDirector(this);
     } else for (const team of this.options.teams) this.addTower(team, skirmishPlacement(team));
     buildScenario(this, this.options.scenario);

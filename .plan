@@ -119,7 +119,9 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
   (Built and live 2026-11-14. There is no way to win yet, by design: the Stronghold is P4. A run ends when the Core falls.)
 
 ## P4: the other towers
-- [ ] Stronghold: an AI-run hostile tower (reuse `AiController` + a script). Dormant (economy only) until discovered,
+- [x] Stronghold: an AI-run hostile tower (reuse `AiController` + a script). (Script `STRONGHOLD`: mines, quarters,
+      walls, then `{ until: 'discovered' }`, then three Barracks. No Gun Nest: with one the steady bot won 17%.)
+      Original spec: Dormant (economy only) until discovered,
       then it sends its own units at you. Destroying its Core wins the run.
 - [ ] Trader: a neutral tower. When a player unit reaches it, a Trade panel unlocks (works from home afterwards):
       minerals ↔ gas at a posted, slowly drifting rate, and a one-time gift. Hostiles ignore it.
@@ -136,6 +138,7 @@ incidents inside the tower (fire, breach) · a bigger tower that unlocks floors 
 Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player-written automation (Auto-Starcraft tie-in) · AR.
 
 ## Feel test for P3 (Jono)
+Answered 2026-11-14: "dig it, go P4". No changes requested; the detailed questions below stay open for later notes.
 - [ ] Does "mostly building, sometimes raided, sometimes exploring" feel like the game you wanted?
 - [ ] Raid frequency and size: too much, too little?
 - [ ] Is Deploy (Home / Left / Right) enough control, too much, or too fiddly?
@@ -144,6 +147,7 @@ Mobile polish and PWA (old M5) · multiplayer lockstep · Jackbox mode · player
 
 ---
 Log
+- 2026-11-14: P4 Stronghold (sim + AI), assault order for bots. Steady bot wins 28%. SAVE_VERSION 4
 - 2026-11-14: P3 built: client, balance bot, raid sizes tuned, difficulty scales raids. SAVE_VERSION 3. 75 tests. Feel test pending
 - 2026-11-14: P3 camps + raid director (sim). 74 tests
 - 2026-11-14: P3 defense rooms (Gun Nest, Flak; systems/defense.ts). SAVE_VERSION 2

@@ -4,7 +4,7 @@ import { parseArgs } from 'node:util';
 import { World } from '../src/sim/world.ts';
 import { RAID_SCALE } from '../src/sim/defs.ts';
 import { AiController, stepWithAi } from '../src/ai/controller.ts';
-import { BOTS, SCRIPTS } from '../src/ai/scripts.ts';
+import { BOTS, SCRIPTS, STRONGHOLD } from '../src/ai/scripts.ts';
 import type { AiLevel } from '../src/ai/types.ts';
 import type { Team } from '../src/sim/types.ts';
 
@@ -17,6 +17,8 @@ export function runMatch(a: string, b: string, la: AiLevel, lb: AiLevel, seed: n
   return { winner: w.winner, seconds: w.seconds, world: w };
 }
 
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
 function series(a: string, b: string, la: AiLevel, lb: AiLevel, n: number): void {
   let wa = 0, wb = 0, draws = 0, total = 0, longest = 0;
   for (let i = 1; i <= n; i++) {
@@ -27,23 +29,24 @@ function series(a: string, b: string, la: AiLevel, lb: AiLevel, n: number): void
     total += r.seconds;
     longest = Math.max(longest, r.seconds);
   }
-  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   console.log(
     `${`${a}/${la}`.padEnd(13)} vs ${`${b}/${lb}`.padEnd(13)} ${String(wa).padStart(3)}-${String(wb).padEnd(3)} draws ${draws}  avg ${mmss(total / n)}  longest ${mmss(longest)}`,
   );
 }
 
-export type RunResult = { seconds: number; survived: boolean; repelled: number; raids: number; explored: number; camps: number };
+export type RunResult = { seconds: number; survived: boolean; won: boolean; repelled: number; raids: number; explored: number; camps: number };
 
 /** One Expedition run by a scripted player, up to `maxSeconds`. */
-export function runExpedition(bot: string, level: AiLevel, seed: number, maxSeconds = 900, raids: AiLevel = 'steady'): RunResult {
+export function runExpedition(bot: string, level: AiLevel, seed: number, maxSeconds = 1200, raids: AiLevel = 'steady'): RunResult {
   const w = new World({ seed, mode: 'expedition', raidScale: RAID_SCALE[raids] });
-  const ai = new AiController(0, BOTS[bot], level, seed);
-  while (w.winner === null && w.seconds < maxSeconds) stepWithAi(w, [ai]);
+  // The player bot, and the Stronghold's AI at the same difficulty as the raids (as in the game).
+  const ais = [new AiController(0, BOTS[bot], level, seed), new AiController(1, STRONGHOLD, raids, seed)];
+  while (w.winner === null && w.seconds < maxSeconds) stepWithAi(w, ais);
   const d = w.director!;
   return {
     seconds: w.seconds,
-    survived: w.winner === null,
+    survived: w.winner !== 1,
+    won: w.winner === 0,
     repelled: d.repelled,
     raids: d.raids,
     explored: w.map!.explored.filter(Boolean).length,
@@ -56,7 +59,8 @@ function expeditionSeries(bot: string, level: AiLevel, n: number): void {
   const pct = (f: (r: RunResult) => boolean) => `${Math.round((runs.filter(f).length / n) * 100)}%`.padStart(4);
   const avg = (f: (r: RunResult) => number) => (runs.reduce((s, r) => s + f(r), 0) / n).toFixed(1);
   console.log(
-    `${`${bot}/${level}`.padEnd(20)} alive at 5:00 ${pct((r) => r.seconds >= 300)}  10:00 ${pct((r) => r.seconds >= 600)}  15:00 ${pct((r) => r.seconds >= 900)}` +
+    `${`${bot}/${level}`.padEnd(20)} won ${pct((r) => r.won)} (avg ${mmss(runs.filter((r) => r.won).reduce((s, r) => s + r.seconds, 0) / Math.max(1, runs.filter((r) => r.won).length))})` +
+      `  alive or won at 5:00 ${pct((r) => r.won || r.seconds >= 300)}  10:00 ${pct((r) => r.won || r.seconds >= 600)}  15:00 ${pct((r) => r.won || r.seconds >= 900)}  20:00 ${pct((r) => r.survived)}` +
       `  raids repelled ${avg((r) => r.repelled)} of ${avg((r) => r.raids)}  sectors ${avg((r) => r.explored)}/11  camps ${avg((r) => r.camps)}`,
   );
 }

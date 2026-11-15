@@ -13,11 +13,19 @@ export type Where = 'front' | 'back' | 'merge' | 'up' | 'core' | 'left' | 'right
 export type BuildAction = { build: RoomId; at: Where; train?: UnitId; deploy?: Deploy };
 
 /** An order step: build something, keep training for a while, or give the army an order (Expedition bots). */
-export type Step = BuildAction | { train: number } | { order: 'sendLeft' | 'sendRight' | 'recall' };
+export type Step =
+  | BuildAction
+  | { train: number }
+  | { order: ArmyOrder }
+  /** Wait here (no building, no rules) until a player unit has found this AI's tower (Expedition Stronghold). */
+  | { until: 'discovered' };
 
-export type Cond = { supplyCapped: true } | { bankOver: number };
+/** assault: send the garrison toward the Stronghold if it has been found, else toward the less explored side. */
+export type ArmyOrder = 'sendLeft' | 'sendRight' | 'recall' | 'assault';
 
-export type Rule = { when: Cond; do: BuildAction };
+export type Cond = { supplyCapped: true } | { bankOver: number } | { garrisonOver: number };
+
+export type Rule = { when: Cond; do: BuildAction } | { when: Cond; order: ArmyOrder };
 
 export type AiScript = {
   id: string;

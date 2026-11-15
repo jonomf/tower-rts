@@ -7,7 +7,8 @@ import { Rng } from '../sim/rng.ts';
 import { buildCost, canAfford, placementError, roomAt, supplyMax } from '../sim/tower.ts';
 import type { Team, Tower } from '../sim/types.ts';
 import type { World } from '../sim/world.ts';
-import type { AiLevel, AiScript, BuildAction, Cond, Where } from './types.ts';
+import type { AiLevel, AiScript, ArmyOrder, BuildAction, Cond, Where } from './types.ts';
+import { sectorOf, siteAt } from '../sim/map.ts';
 
 /** Ticks between decisions (0.5 s). */
 const THINK = 10;
@@ -121,8 +122,13 @@ export class AiController {
     while (this.step < this.script.order.length) {
       const a = this.script.order[this.step];
       if ('order' in a) {
-        if (a.order === 'recall') w.issue({ type: 'recall', team: this.team });
-        else w.issue({ type: 'sendGarrison', team: this.team, dir: a.order === 'sendLeft' ? -1 : 1 });
+        this.order(w, a.order);
+        this.step++;
+        continue;
+      }
+      if ('until' in a) {
+        const site = w.map && siteAt(w.map, sectorOf(t.x + TOWER.cols / 2));
+        if (site && !site.discovered) return;
         this.step++;
         continue;
       }
@@ -157,6 +163,10 @@ export class AiController {
     // 3. Standing rules.
     for (const rule of this.script.rules) {
       if (!this.holds(w, t, rule.when)) continue;
+      if ('order' in rule) {
+        this.order(w, rule.order);
+        return;
+      }
       const cell = pickCell(t, rule.do.build, rule.do.at);
       if (!cell || !canAfford(t.bank, buildCost(t, rule.do.build, cell.col, cell.floor))) continue;
       this.build(w, rule.do, cell);
@@ -167,7 +177,23 @@ export class AiController {
   private holds(w: World, t: Tower, c: Cond): boolean {
     if ('supplyCapped' in c)
       return w.supplyUsed(this.team) + 2 > supplyMax(t) && !t.rooms.some((r) => r.def === 'quarters' && !r.built);
+    if ('garrisonOver' in c) return w.units.filter((u) => u.team === this.team && u.order === 'garrison').length > c.garrisonOver;
     return t.bank.minerals > c.bankOver;
+  }
+
+  private order(w: World, o: ArmyOrder): void {
+    if (o === 'recall') {
+      w.issue({ type: 'recall', team: this.team });
+      return;
+    }
+    let dir: 1 | -1 = o === 'sendLeft' ? -1 : 1;
+    if (o === 'assault' && w.map) {
+      const m = w.map;
+      const target = m.sites.find((s) => s.kind === 'stronghold' && s.discovered);
+      const explored = (side: number) => m.explored.filter((e, i) => e && Math.sign(i - m.radius) === side).length;
+      dir = target ? (target.sector < 0 ? -1 : 1) : explored(-1) < explored(1) ? -1 : 1;
+    }
+    w.issue({ type: 'sendGarrison', team: this.team, dir });
   }
 
   private build(w: World, a: BuildAction, cell: Cell): void {

@@ -63,6 +63,7 @@ export const BOTS: Record<string, AiScript> = {
       { build: 'quarters', at: 'up' },
     ],
     rules: [
+      { when: { garrisonOver: 14 }, order: 'assault' },
       { when: { supplyCapped: true }, do: { build: 'quarters', at: 'up' } },
       { when: { bankOver: 400 }, do: { build: 'gunNest', at: 'left' } },
       { when: { bankOver: 300 }, do: { build: 'gunNest', at: 'right' } },
@@ -70,3 +71,31 @@ export const BOTS: Record<string, AiScript> = {
     rebuild: true,
   },
 };
+
+/**
+ * The Expedition Stronghold: economy and walls while hidden; once a player unit finds it, three Barracks of Troopers.
+ * (A Gun Nest here dropped the steady bot's win rate from 30% to 17%, below the 30–60% target, so it has none.)
+ * Not offered as a Skirmish opponent.
+ */
+export const STRONGHOLD: AiScript = {
+  id: 'stronghold',
+  name: 'Stronghold',
+  blurb: 'The enemy tower hidden somewhere on the map.',
+  order: [
+    mine, mine, mine, quarters,
+    { build: 'wall', at: 'front' },
+    { build: 'wall', at: 'front' },
+    { until: 'discovered' },
+    troopers,
+    quarters, train(30), troopers, quarters, train(40), troopers, quarters,
+  ],
+  rules: [
+    { when: { supplyCapped: true }, do: quarters },
+    { when: { bankOver: 400 }, do: { build: 'wall', at: 'front' } },
+  ],
+  saves: false,
+  rebuild: true,
+};
+
+/** Every script a saved AI controller may refer to. */
+export const ALL_SCRIPTS: Record<string, AiScript> = { ...SCRIPTS, ...BOTS, stronghold: STRONGHOLD };

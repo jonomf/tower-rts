@@ -2,11 +2,18 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { World, replay } from '../src/sim/world.ts';
 import { MAP, ROOMS, TOWER, UNITS } from '../src/sim/defs.ts';
-import { sectorCenter } from '../src/sim/map.ts';
+import { generateMap, sectorCenter } from '../src/sim/map.ts';
 import { defaultDeploy, roomAt } from '../src/sim/tower.ts';
 
+/** A seed whose map has nothing hostile (no Camp, no Stronghold) on the left, so units can march to the left edge. */
+const openLeft = (() => {
+  for (let seed = 1; seed < 500; seed++)
+    if (generateMap(seed).sites.every((s) => s.sector >= 0 || (s.kind !== 'camp' && s.kind !== 'stronghold'))) return seed;
+  throw new Error('no seed with an open left side');
+})();
+
 /** An Expedition world with a finished Barracks at (4,0) and a deep bank. */
-function expedition(seed = 7) {
+function expedition(seed = openLeft) {
   const w = new World({ mode: 'expedition', seed });
   const home = w.tower(0);
   home.bank = { minerals: 100000, gas: 100000 };

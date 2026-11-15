@@ -33,11 +33,13 @@ test('a restored Expedition keeps its map, fog, sites and unit orders', () => {
   w.issue({ type: 'build', team: 0, room: 'barracks', col: 4, floor: 0 });
   w.issue({ type: 'build', team: 0, room: 'quarters', col: 4, floor: 1 });
   w.stepSeconds(20);
-  w.issue({ type: 'setDeploy', team: 0, col: 4, floor: 0, deploy: 'right' });
+  // Left: on this seed a camp blocks the way, so the scouts can't reach (and raze) the AI-less Stronghold on the right.
+  w.issue({ type: 'setDeploy', team: 0, col: 4, floor: 0, deploy: 'left' });
   w.issue({ type: 'setPosture', team: 0, posture: 'build' });
   w.stepSeconds(5);
   w.issue({ type: 'setPosture', team: 0, posture: 'army' });
   w.stepSeconds(160); // past the first raid, so raiders and the director's schedule are in the save
+  assert.equal(w.winner, null);
   assert.ok(w.director!.raids >= 1);
   const w2 = World.fromSnapshot(roundTrip(w.snapshot()));
   assert.deepEqual(w2.director, w.director);
