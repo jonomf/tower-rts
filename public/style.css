@@ -112,6 +112,12 @@ i.s { color: var(--s); }
 #panel .summary .ctrl { grid-column: 2; grid-row: 1 / span 2; }
 #panel .summary .orders { grid-column: 1; grid-row: 2; margin-top: 0; align-self: start; }
 #panel .sub { margin-top: 4px; }
+/* Trade row: under the tower lines in the right column of the strip; the hint gives way to it. */
+#panel .acts.trade button { min-height: 34px; font-size: 13px; padding: 0 4px; white-space: nowrap; min-width: 0; }
+#panel .acts.trade { gap: 6px; }
+#panel .summary.has-trade .ctrl { grid-row: 1; }
+#panel .summary .trade { grid-column: 2; grid-row: 2; margin-top: 0; align-self: start; }
+#panel .summary.has-trade .hint { display: none; }
 /* Strip: unit buttons on one row, without the supply line, so Collect/Demolish still fit in 120 px. */
 #panel .acts.train { grid-auto-flow: column; grid-auto-columns: 1fr; }
 #panel .train button { font-size: 13px; }
@@ -138,6 +144,8 @@ i.s { color: var(--s); }
   }
   #panel .ctrl { margin-top: 6px; }
   #panel .acts button { min-height: 34px; }
+  #panel .acts.trade button { font-size: 12px; padding: 0 1px; }
+  #panel .acts.trade { gap: 4px; }
 }
 
 /* Narrow portrait phones: keep every top-bar control on screen. */
@@ -177,6 +185,8 @@ i.s { color: var(--s); }
 #panel .acts.train { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 6px; }
 #panel .train button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 40px; padding: 3px; font-weight: 600; }
 @media (min-width: 900px) and (min-height: 521px), (orientation: landscape) and (max-height: 520px) {
+  #panel .summary.has-trade .hint { display: block; }
+  #panel .summary .trade, #panel .summary .orders { margin-top: 8px; }
   #panel .acts.train { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); }
   #panel .train button { font-size: 15px; }
   #panel .train .cost + .cost { display: inline; }
@@ -194,6 +204,12 @@ i.s { color: var(--s); }
 #gameover.won .sheet { border-color: var(--accent); }
 #gameover h2 { margin: 0 0 6px; }
 #gameover .acts { display: flex; justify-content: center; margin-top: 12px; }
+#gameover-stats { margin: 10px auto 0; min-width: 230px; text-align: left; font-size: 14px; }
+#gameover-stats[hidden] { display: none; }
+#gameover-stats div { display: flex; justify-content: space-between; gap: 24px; padding: 3px 0; border-bottom: 1px solid var(--ui-line); }
+#gameover-stats span { color: var(--dim); }
+#gameover-stats .best { border-bottom: 0; }
+#gameover-stats .best span, #gameover-stats .best b { color: var(--accent); }
 #gameover button { min-height: 44px; padding: 0 22px; font-weight: 700; }
 
 #topbar .clock.overtime { color: #ff7a7a; }

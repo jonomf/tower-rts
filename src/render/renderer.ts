@@ -88,8 +88,9 @@ export class Renderer {
     this.ground(game);
     if (game.world.map) this.sites(game.world.map);
     for (const t of game.world.towers) {
-      if (t.kind === 'camp') this.camp(game, t);
-      else this.tower(game, t);
+      if (!this.known(game, t)) continue; // still in the fog
+      if (t.kind === 'main') this.tower(game, t);
+      else this.camp(game, t);
     }
     this.placement(game);
     this.selection(game);
@@ -199,18 +200,23 @@ export class Renderer {
   }
 
   /** A raider camp: a low palisade around its rooms. Hidden until its sector's site is discovered. */
-  private camp(game: Game, t: Tower): void {
+  /** Expedition: other teams' towers are drawn only once their sector's site has been discovered. */
+  private known(game: Game, t: Tower): boolean {
     const m = game.world.map;
-    const site = m?.sites[sectorOf(t.x + TOWER.cols / 2) + m.radius];
-    if (m && !site?.discovered) return;
+    if (!m || t.team === game.team) return true;
+    return !!m.sites[sectorOf(t.x + TOWER.cols / 2) + m.radius]?.discovered;
+  }
+
+  /** A small site tower (raider camp or trading post): a low palisade around its rooms, with its team's flag. */
+  private camp(game: Game, t: Tower): void {
     const { ctx } = this;
     const x0 = (t.x + 1) * CELL_W, w = 4 * CELL_W, h = 2 * CELL_H;
-    ctx.fillStyle = '#3a2a2a';
+    ctx.fillStyle = t.kind === 'trader' ? '#3d3524' : '#3a2a2a';
     ctx.fillRect(x0 - 8, -h - 8, w + 16, h + 8);
     ctx.fillStyle = '#1c1416';
     ctx.fillRect(x0, -h, w, h);
     // Palisade stakes along the top, and a raider flag.
-    ctx.fillStyle = '#5a3d33';
+    ctx.fillStyle = t.kind === 'trader' ? '#6b5a30' : '#5a3d33';
     for (let x = x0 - 8; x < x0 + w + 8; x += 16) {
       ctx.beginPath();
       ctx.moveTo(x, -h - 8);
@@ -218,7 +224,7 @@ export class Renderer {
       ctx.lineTo(x + 16, -h - 8);
       ctx.fill();
     }
-    ctx.fillStyle = TEAM_COLOR[1];
+    ctx.fillStyle = TEAM_COLOR[t.team];
     ctx.fillRect(x0 + w / 2 - 1.5, -h - 64, 3, 44);
     ctx.fillRect(x0 + w / 2, -h - 64, 26, 16);
     for (const g of mergeGroups(t)) {
@@ -368,7 +374,8 @@ export class Renderer {
       if (!site.discovered || site.kind === 'home' || site.kind === 'empty') continue;
       const look = SITE_ICON[site.kind];
       const x = sectorCenter(site.sector) * CELL_W;
-      if (site.kind === 'camp' && !site.claimed) continue; // the camp itself is drawn there
+      // Camps (while alive), the Trader and the Stronghold are drawn as towers; no signpost.
+      if ((site.kind === 'camp' && !site.claimed) || site.kind === 'trader' || site.kind === 'stronghold') continue;
       const done = (site.kind === 'cache' || site.kind === 'camp') && site.claimed;
       ctx.globalAlpha = done ? 0.35 : 1;
       // A post with a sign.

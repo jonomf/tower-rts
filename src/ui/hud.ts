@@ -1,5 +1,7 @@
 /** DOM HUD: top bar, build palette, selected-room panel, toasts, help. Rebuilt cheaply each frame via text diffing. */
-import { ECON, EXPEDITION_ONLY, MERGE_MULT, PALETTE, ROOMS, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
+import { ECON, EXPEDITION_ONLY, MERGE_MULT, PALETTE, ROOMS, TRADE, UNITS, type Cost, type UnitId } from '../sim/defs.ts';
+import { tradeOffer } from '../sim/systems/explore.ts';
+import { recordRun, runStats } from './runs.ts';
 import { bufferCap, canAfford, coreOf, defaultDeploy, groupOf, mergeGroups, openSidesAt, removalError, roomAt, roomRate, supplyMax } from '../sim/tower.ts';
 import { DEFAULT_MATCH, type Game, type GameMode, type MatchConfig } from '../game.ts';
 import { SCRIPTS } from '../ai/scripts.ts';
@@ -54,6 +56,8 @@ export class Hud {
     this.panel.addEventListener('click', (e) => {
       const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
       if (act === 'recall') return game.recall();
+      if (act === 'sell-minerals') return game.trade('minerals');
+      if (act === 'sell-gas') return game.trade('gas');
       if (act === 'send-left') return game.send(-1);
       if (act === 'send-right') return game.send(1);
       const s = game.selected;
@@ -131,8 +135,8 @@ export class Hud {
       { id: 'sharp', name: 'Sharp', blurb: 'Bigger raids (130%). You’ll need to tap everything.' },
     ];
     const modes: { id: GameMode; name: string; blurb: string }[] = [
+      { id: 'expedition', name: 'Expedition', blurb: 'One tower in fogged country. Hold off raids, explore, and destroy the hidden Stronghold.' },
       { id: 'skirmish', name: 'Skirmish', blurb: 'Two towers, one lane. Destroy the enemy Core.' },
-      { id: 'expedition', name: 'Expedition (new)', blurb: 'One tower in fogged country. Send squads out to explore and find caches.' },
     ];
     const syncMode = () => {
       const exp = this.choice.mode === 'expedition';
@@ -218,13 +222,31 @@ export class Hud {
     const s = Math.floor(w.seconds);
     const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const won = w.winner === this.game.team;
-    $('#gameover-title').textContent = won ? 'Victory! Enemy Core destroyed' : 'Defeat: your Core fell';
-    const d = w.director;
-    $('#gameover-detail').textContent = won
-      ? `Took ${time}. Core HP left: ${Math.ceil(coreOf(this.game.tower)?.hp ?? 0)}.`
-      : d && w.map
-        ? `You held out for ${time}. Raids repelled: ${d.repelled}. Sectors explored: ${w.map.explored.filter(Boolean).length} of ${w.map.sites.length}.`
-        : `You held out for ${time}.`;
+    const stats = $('#gameover-stats');
+    if (w.map) {
+      // Expedition: the run summary, and the best run so far (kept in this browser).
+      const run = runStats(w);
+      const { best, isBest } = recordRun(run);
+      $('#gameover-title').textContent = won ? 'Victory! The Stronghold has fallen' : 'Defeat: your Core fell';
+      $('#gameover-detail').textContent = won ? `You won in ${time}.` : `You held out for ${time}.`;
+      const row = (k: string, v: string | number) => `<div><span>${k}</span><b>${v}</b></div>`;
+      stats.innerHTML =
+        row('Sectors explored', `${run.explored} / ${w.map.sites.length}`) +
+        row('Raids repelled', run.repelled) +
+        row('Camps destroyed', run.camps) +
+        row('Rooms built', run.rooms) +
+        row('Score', run.score) +
+        `<div class="best"><span>${isBest ? 'New best!' : 'Best score'}</span><b>${best.score}</b></div>`;
+      stats.hidden = false;
+      set($('#again'), 'New run');
+      set($('#to-menu'), 'Menu');
+    } else {
+      $('#gameover-title').textContent = won ? 'Victory! Enemy Core destroyed' : 'Defeat: your Core fell';
+      $('#gameover-detail').textContent = won ? `Took ${time}. Core HP left: ${Math.ceil(coreOf(this.game.tower)?.hp ?? 0)}.` : `You held out for ${time}.`;
+      stats.hidden = true;
+      set($('#again'), 'Rematch');
+      set($('#to-menu'), 'Change opponent');
+    }
     this.gameover.classList.toggle('won', won);
     clearSave(); // a finished match isn't resumable
     this.gameover.classList.add('open');
@@ -283,10 +305,18 @@ export class Hud {
         <p class="hint">${hint}</p>
       </div>`;
     // Buttons are built once per layout and only enabled/disabled after that (never rebuilt on a timer).
-    const key = exp ? 'summary:exp' : 'summary';
+    const trading = !!g.world.trade?.unlocked;
+    const key = exp ? (trading ? 'summary:exp:trade' : 'summary:exp') : 'summary';
     if (this.panelKey !== key) {
       this.panelKey = key;
-      this.panel.innerHTML = `<div class="summary"><div class="sum-text"></div>${
+      this.panel.innerHTML = `<div class="summary${trading ? ' has-trade' : ''}"><div class="sum-text"></div>${
+        trading
+          ? `<div class="acts trade" title="The Trader's rate changes every minute">
+              <button data-act="sell-minerals"></button>
+              <button data-act="sell-gas"></button>
+            </div>`
+          : ''
+      }${
         exp
           ? `<div class="acts orders">
               <button data-act="send-left" title="March every unit at home to the left">◀ Send</button>
@@ -300,6 +330,14 @@ export class Hud {
     if (el.innerHTML !== html) el.innerHTML = html;
     for (const b of this.panel.querySelectorAll<HTMLButtonElement>('.orders button')) {
       b.disabled = b.dataset.act === 'recall' ? out === 0 : home === 0;
+    }
+    if (trading) {
+      const offer = tradeOffer(g.world.trade!.rate);
+      const [sellM, sellG] = this.panel.querySelectorAll<HTMLButtonElement>('.trade button');
+      setHtml(sellM, `${TRADE.mineralsIn}<i class="m">◆</i> → ${offer.gas}<i class="g">▲</i>`);
+      setHtml(sellG, `${TRADE.gasIn}<i class="g">▲</i> → ${offer.minerals}<i class="m">◆</i>`);
+      sellM.disabled = t.bank.minerals < TRADE.mineralsIn;
+      sellG.disabled = t.bank.gas < TRADE.gasIn;
     }
   }
 
@@ -406,7 +444,7 @@ function loadChoice(): MatchConfig {
   try {
     const c = JSON.parse(localStorage.getItem(CHOICE_KEY) ?? 'null');
     if (c && (c.opponent === 'dummy' || SCRIPTS[c.opponent]) && ['relaxed', 'steady', 'sharp'].includes(c.level))
-      return { ...c, mode: c.mode === 'expedition' ? 'expedition' : 'skirmish' };
+      return { ...c, mode: c.mode === 'skirmish' ? 'skirmish' : 'expedition' };
   } catch {
     // storage unavailable: fall through to the default
   }
@@ -426,6 +464,13 @@ function costHtml(c: Cost): string {
   if (c.minerals) parts.push(`<i class="m">◆</i>${c.minerals}`);
   if (c.gas) parts.push(`<i class="g">▲</i>${c.gas}`);
   return parts.join(' ') || 'free';
+}
+
+function setHtml(el: HTMLElement, html: string): void {
+  if (el.dataset.html !== html) {
+    el.dataset.html = html;
+    el.innerHTML = html;
+  }
 }
 
 function set(el: HTMLElement, text: string): void {

@@ -125,9 +125,13 @@ Goal: towers at arbitrary positions on one axis, attackable from both sides, mor
       then it sends its own units at you. Destroying its Core wins the run.
 - [x] Trader: a neutral tower. When a player unit reaches it, a Trade panel unlocks (works from home afterwards):
       minerals ↔ gas at a posted, slowly drifting rate, and a one-time gift. Hostiles ignore it.
-- [ ] Run summary screen: time, sectors explored, raids repelled, rooms built. Best run saved locally (try/catch around storage).
-- [ ] Make Expedition the default mode.
-- Exit: a full run can be won; a scripted bot wins 30–60% of seeds at Steady.
+- [x] Client for both: the Stronghold AI runs in the game; other towers are drawn (and marked on the strip) only once
+      found; Trade buttons in the tower summary; toasts for the Trader's gift and the Stronghold waking.
+- [x] Run summary screen: time, sectors explored, raids repelled, camps, rooms built, score. Best run saved locally
+      (`src/ui/runs.ts`, try/catch around storage).
+- [x] Make Expedition the default mode.
+- Exit: a full run can be won; a scripted bot wins 30–60% of seeds at Steady. ✅ 40 maps, Steady raids: Steady bot wins
+  38% (avg 9:11), Sharp 95%, Relaxed 0%. Verified in headless Chromium at all three sizes. **Next is P5: Jono picks.**
 
 ## P5: Fallout Shelter depth (pick with Jono after P3; do not start unasked)
 Candidates, roughly cheapest first: tech that pays (old M4 roster: Siege Walker, Interceptor, Lab upgrades) ·
@@ -147,6 +151,7 @@ Answered 2026-11-14: "dig it, go P4". No changes requested; the detailed questio
 
 ---
 Log
+- 2026-11-14: P4 done: client (Stronghold AI, hidden towers, Trade buttons), run summary + best run, Expedition default. 84 tests
 - 2026-11-14: P4 Trader (sim): gift, trade command, drifting rate. SAVE_VERSION 5. 82 tests
 - 2026-11-14: P4 Stronghold (sim + AI), assault order for bots. Steady bot wins 28%. SAVE_VERSION 4
 - 2026-11-14: P3 built: client, balance bot, raid sizes tuned, difficulty scales raids. SAVE_VERSION 3. 75 tests. Feel test pending

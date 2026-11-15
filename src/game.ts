@@ -9,7 +9,7 @@ import type { SavedGame } from './ui/save.ts';
 import { PLAYER, type Command, type CommandResult, type Deploy, type Team } from './sim/types.ts';
 import { CELL_H, CELL_W, cellRect, type Cell } from './render/layout.ts';
 import { AiController } from './ai/controller.ts';
-import { SCRIPTS } from './ai/scripts.ts';
+import { ALL_SCRIPTS, SCRIPTS, STRONGHOLD } from './ai/scripts.ts';
 import type { AiLevel } from './ai/types.ts';
 
 /**
@@ -18,7 +18,7 @@ import type { AiLevel } from './ai/types.ts';
  */
 export type GameMode = 'skirmish' | 'expedition';
 export type MatchConfig = { mode: GameMode; opponent: string; level: AiLevel };
-export const DEFAULT_MATCH: MatchConfig = { mode: 'skirmish', opponent: 'rush', level: 'relaxed' };
+export const DEFAULT_MATCH: MatchConfig = { mode: 'expedition', opponent: 'rush', level: 'relaxed' };
 
 /** How a found site is announced. */
 const SITE_NAMES: Partial<Record<string, string>> = {
@@ -72,7 +72,8 @@ export class Game {
     this.world = expedition
       ? new World({ seed, mode: 'expedition', raidScale: RAID_SCALE[config.level] })
       : new World({ seed, teams: [0, 1], scenario: script ? 'none' : 'dummy' });
-    this.ais = script ? [new AiController(1, script, config.level, seed)] : [];
+    // Expedition: the hidden Stronghold is run by its own AI, at the chosen difficulty.
+    this.ais = expedition ? [new AiController(1, STRONGHOLD, config.level, seed)] : script ? [new AiController(1, script, config.level, seed)] : [];
     this.started = true;
     this.placing = null;
     this.selected = null;
@@ -83,7 +84,7 @@ export class Game {
     this.onStart();
     this.notify(
       expedition
-        ? 'Raiders come at 2:30. Build Mines, a Barracks (it garrisons by default) and Gun Nests.'
+        ? 'Goal: find and destroy the Stronghold. Raiders come at 2:30: build Mines, a Barracks and Gun Nests.'
         : script
           ? `${script.name} is building. Mines first, then a Barracks.`
           : 'Practice: raze the dummy tower.',
@@ -106,7 +107,7 @@ export class Game {
   /** Continue a saved match. It resumes paused, so the player can get their bearings. */
   resume(s: SavedGame): void {
     this.world = World.fromSnapshot(s.world);
-    this.ais = s.ais.map((a) => AiController.fromSnapshot(a, SCRIPTS));
+    this.ais = s.ais.map((a) => AiController.fromSnapshot(a, ALL_SCRIPTS));
     this.config = { ...DEFAULT_MATCH, ...s.config };
     this.speed = SPEEDS.includes(s.speed) ? s.speed : 1;
     this.started = true;
@@ -130,10 +131,15 @@ export class Game {
     for (const e of w.effects) {
       if (e.tick !== w.tick - 1) continue;
       if (e.kind === 'discovered' && SITE_NAMES[e.site]) {
-        this.notify(`Scouts found ${SITE_NAMES[e.site]} ${e.sector < 0 ? 'to the left' : 'to the right'} (sector ${Math.abs(e.sector)}).`);
+        const where = `${e.sector < 0 ? 'to the left' : 'to the right'} (sector ${Math.abs(e.sector)})`;
+        if (e.site === 'stronghold') this.notify(`Stronghold found ${where}. It is awake: destroy its Core to win.`, 'error');
+        else this.notify(`Scouts found ${SITE_NAMES[e.site]} ${where}.`);
       } else if (e.kind === 'loot') {
         this.float(e.x * CELL_W, -CELL_H * 1.2, e.gained);
         this.notify(`Cache looted: +${Math.floor(e.gained.minerals)} minerals${e.gained.gas ? `, +${Math.floor(e.gained.gas)} gas` : ''}.`);
+      } else if (e.kind === 'traderMet') {
+        this.float(e.x * CELL_W, -CELL_H * 2.6, e.gained);
+        this.notify(`The Trader welcomes you: +${e.gained.minerals} minerals, +${e.gained.gas} gas. Trading is open (tower summary).`);
       } else if (e.kind === 'warning') {
         this.notify(`Raid from the ${e.side < 0 ? 'left' : 'right'} in ${e.seconds} s!`, 'error');
       } else if (e.kind === 'raid') {
@@ -259,6 +265,12 @@ export class Game {
     const next = this.tower.posture === 'army' ? 'build' : 'army';
     if (this.issue({ type: 'setPosture', team: this.team, posture: next }).ok)
       this.notify(next === 'build' ? 'Build posture: all training paused. Save up for rooms.' : 'Army posture: training resumed.');
+  }
+
+  /** Sell minerals for gas or gas for minerals at the Trader's rate. */
+  trade(sell: 'minerals' | 'gas'): void {
+    const res = this.issue({ type: 'trade', team: this.team, sell });
+    if (res.ok && res.gained) this.notify(`Traded for +${res.gained.minerals || res.gained.gas} ${res.gained.minerals ? 'minerals' : 'gas'}.`);
   }
 
   recall(): void {

@@ -48,7 +48,7 @@ state), bump `SAVE_VERSION` in `src/sim/world.ts` so old saves are dropped inste
 - `npm run typecheck`: browser tsconfig + node tsconfig (tests, tools, sim)
 - `npm run build`: tsc → `dist/js-<build id>/` (cache-busting), copies `public/` → `dist/`
 - `npm run match -- [--a rush] [--b boom] [--la sharp] [--lb sharp] [--n 50] [--all]`: headless AI vs AI (win rates, lengths)
-- `npm run match -- --mode expedition [--bot relaxed|steady|sharp] [--n 40]`: the homesteader bot vs raids (survival at 5/10/15 min)
+- `npm run match -- --mode expedition [--bot relaxed|steady|sharp] [--n 40]`: the homesteader bot vs raids and the Stronghold (won %, survival)
 
 Before every commit: `npm run typecheck && npm test && npm run build`. Never push red.
 
@@ -91,7 +91,7 @@ Coordinates: one world axis in cells. A tower spans `[x, x + TOWER.cols)`; colum
 `x * CELL_W` everywhere (`src/render/layout.ts`).
 
 `window.game`, `window.cam` and `window.renderer` (its `strip` rect, for strip taps) are exposed for the console and
-for screenshot scripts. Start Expedition in Playwright by clicking `#modes button` "Expedition" before `#start`. Fast-forward with `game.tick()`
+for screenshot scripts. Expedition is the default mode (click `#modes button` "Skirmish" before `#start` for the other). Fast-forward with `game.tick()`
 (not `world.step()`, which skips the AI).
 
 ## Port from docs/auto-rts (copy, then adapt)
@@ -103,4 +103,4 @@ After UI changes: `npm run build`, serve `dist/`, and drive it with Playwright (
 check for console errors. Look at every screenshot.
 
 ## Gates
-P3 ends with a feel test by Jono. Don't start P4 until he has answered it in `.plan`. Don't start P5 unasked.
+P4 is done. Don't start P5 unasked: Jono picks the first P5 item (candidates in `.plan`).

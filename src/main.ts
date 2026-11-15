@@ -42,7 +42,8 @@ function measureInsets(): void {
 
 /** Camera presets, cycled by ⌖ / F: your tower (+ a peek toward its front), the whole field, then each other tower. */
 let view = 0;
-const viewCount = () => game.world.towers.length + 1;
+// Expedition: your tower and the whole map (other places are reached by tapping the sector strip).
+const viewCount = () => (game.world.map ? 2 : game.world.towers.length + 1);
 
 function frameView(): void {
   // Keep the strip overlay (lane or sector strip, drawn at the bottom of the free area) off the tower.
@@ -91,7 +92,7 @@ function cycleView(): void {
   userMovedCamera = false;
   view = (view + 1) % viewCount();
   frameView();
-  game.notify(`View: ${view === 0 ? 'your tower' : view === 1 ? 'whole field' : 'enemy tower'}`);
+  game.notify(`View: ${view === 0 ? 'your tower' : view === 1 ? (game.world.map ? 'whole map' : 'whole field') : 'enemy tower'}`);
 }
 
 function onResize(): void {

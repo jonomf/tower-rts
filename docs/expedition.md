@@ -70,15 +70,21 @@ A turret that gets walled in stops firing (show "blocked" on the room).
   Camp Core 600 hp. Camps never build.
 - Stronghold: full 6×8 tower run by an `AiController`. Before discovery it only builds economy and walls (a script with
   no production rooms). On discovery, switch to a combat script (start from `SCRIPTS.rush`) at the menu's difficulty.
+  As built: one script, `STRONGHOLD` (3 Mines, Quarters, Walls, `{ until: 'discovered' }`, then three Barracks). It has
+  no Gun Nest: with one, the Steady bot won only 17% of maps. It is drawn (and marked on the strip) only once found.
 
 ## Trader
 - Neutral tower, never targeted, never attacks.
 - Trade: sell 100 minerals → 40 gas, or 50 gas → 80 minerals. Rate drifts ±20% every 60 s (seeded).
 - Gift on first contact: 150 minerals and 50 gas.
+- Client: two Trade buttons in the tower summary once the Trader is met; they show the current rate.
 
 ## Win, lose, score
 - Win: Stronghold Core destroyed. Lose: home Core destroyed.
 - Score for the summary screen: sectors explored ×100 + raids repelled ×50 + camps destroyed ×200 + win bonus 1000 − seconds.
+  (`src/ui/runs.ts`; the best run is kept in localStorage under `tower-rts.best`.)
+- P4 exit numbers (`npm run match -- --mode expedition --n 40`, Steady raids): Steady bot wins 38% (avg 9:11), Sharp bot
+  95%, Relaxed bot 0%. How often the bot taps its producers is still the biggest lever.
 
 ## Things deliberately left out for now
 2-D map, unit micro, multiple player towers, diplomacy, crew, research. See P5 in `.plan`.
